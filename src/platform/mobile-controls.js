@@ -16,9 +16,12 @@ root.innerHTML = `
     <div class="ff-mobile-actions" aria-label="Combat controls">
         <div class="ff-mobile-control-stack">
             <div class="ff-weapon-row">
-                <button type="button" data-tap-key="Digit1" aria-label="Select pistol">PSTL</button>
-                <button type="button" data-tap-key="Digit2" aria-label="Select shotgun">SHOT</button>
-                <button type="button" data-tap-key="Digit3" aria-label="Select machine gun">AUTO</button>
+                <button type="button" data-action="weapon-prev" aria-label="Select previous available weapon">PREV</button>
+                <button type="button" data-action="weapon-next" aria-label="Select next available weapon">NEXT</button>
+            </div>
+            <div class="ff-support-row">
+                <button type="button" data-tap-key="KeyM" aria-label="Toggle map">MAP</button>
+                <button type="button" data-hold-key="Tab" aria-label="Hold to view objectives">OBJ</button>
             </div>
             <div class="ff-action-row">
                 <button type="button" class="ff-use" data-hold-key="KeyE" aria-label="Use or open door">USE</button>
@@ -225,6 +228,12 @@ function wireAction(button, action) {
         if (action === 'fire' && currentState === 3) input.setVirtualMouseDown(true);
         if (action === 'pause' && currentState === 3) tapKey('Escape');
         if (action === 'resume' && currentState === 4) tapKey('Escape');
+        if (action === 'weapon-prev' && currentState === 3) {
+            window.dispatchEvent(new CustomEvent('furyfire:cycle-weapon', { detail: { direction: -1 } }));
+        }
+        if (action === 'weapon-next' && currentState === 3) {
+            window.dispatchEvent(new CustomEvent('furyfire:cycle-weapon', { detail: { direction: 1 } }));
+        }
         try { button.setPointerCapture(event.pointerId); } catch (_) {}
     });
     const finish = () => {
