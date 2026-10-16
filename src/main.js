@@ -230,6 +230,22 @@ let currentLevelIndex = 0;
 let levelData  = null;   // Parsed level data from loader.
 let map        = null;   // { grid, width, height }
 let player     = null;
+
+// The mobile weapon buttons cycle through the weapons actually unlocked.
+// Desktop number-key selection remains unchanged.
+window.addEventListener('furyfire:cycle-weapon', (event) => {
+    if (gameState !== GameState.PLAYING || !player) return;
+    const direction = Number(event.detail?.direction) < 0 ? -1 : 1;
+    const count = player.weapons.length;
+    for (let step = 1; step <= count; step++) {
+        const index = (player.currentWeapon + direction * step + count) % count;
+        if (!player.weapons[index]) continue;
+        if (weaponSystem.switchWeapon(index, player)) {
+            audio.play(index === 6 ? 'knife_pullout' : 'weapon_cock', { volume: 0.72 });
+        }
+        break;
+    }
+});
 let doors      = [];
 let enemies    = [];
 let items      = [];
