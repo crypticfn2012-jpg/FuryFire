@@ -105,16 +105,18 @@ const bufferCtx = buffer.getContext('2d');
 
 function resize() {
     const targetAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
-    const windowW = window.innerWidth;
-    const windowH = window.innerHeight;
+    // visualViewport tracks the visible area when mobile browser bars expand/collapse.
+    const viewport = window.visualViewport;
+    const windowW = Math.max(1, viewport ? viewport.width : window.innerWidth);
+    const windowH = Math.max(1, viewport ? viewport.height : window.innerHeight);
     const windowAspect = windowW / windowH;
 
     let width, height;
     if (windowAspect > targetAspect) {
-        height = windowH;
+        height = Math.floor(windowH);
         width  = Math.floor(height * targetAspect);
     } else {
-        width  = windowW;
+        width  = Math.floor(windowW);
         height = Math.floor(width / targetAspect);
     }
 
@@ -126,7 +128,9 @@ function resize() {
     displayCtx.imageSmoothingEnabled = false;
 }
 
-window.addEventListener('resize', resize);
+window.addEventListener('resize', resize, { passive: true });
+window.addEventListener('orientationchange', () => window.setTimeout(resize, 80), { passive: true });
+window.visualViewport?.addEventListener('resize', resize, { passive: true });
 resize();
 
 function requestPointerLockSafe() {
