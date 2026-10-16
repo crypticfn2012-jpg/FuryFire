@@ -109,8 +109,13 @@ export class MenuSystem {
         ctx.fillStyle = '#a0a8b4';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('WASD - MOVE  |  MOUSE - AIM  |  CLICK - FIRE  |  E - INTERACT', cx, controlsY);
-        ctx.fillText(uiText('1-7 - WEAPONS  |  M - MAP  |  TAB - OBJECTIVES  |  ESC - SETTINGS'), cx, controlsY + 12);
+        if (window.FuryFireTouchEnabled) {
+            ctx.fillText(uiText('MOVE - STICK  |  SWIPE - AIM  |  FIRE - SHOOT'), cx, controlsY);
+            ctx.fillText(uiText('USE - DOORS  |  PSTL / SHOT / AUTO - WEAPONS'), cx, controlsY + 12);
+        } else {
+            ctx.fillText('WASD - MOVE  |  MOUSE - AIM  |  CLICK - FIRE  |  E - INTERACT', cx, controlsY);
+            ctx.fillText(uiText('1-7 - WEAPONS  |  M - MAP  |  TAB - OBJECTIVES  |  ESC - SETTINGS'), cx, controlsY + 12);
+        }
 
         // -- Blinking prompt --
         if (this._isBlinkOn()) {
