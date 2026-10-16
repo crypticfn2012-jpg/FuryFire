@@ -219,9 +219,38 @@ export class AudioManager {
     // -------------------------------------------------------------------------
 
     /** @private */
+    _genFuryFireTheme(sampleRate) {
+        // Original synthesised retro-electronic loop; no third-party music file is needed.
+        const seconds = 8;
+        const length = Math.floor(sampleRate * seconds);
+        const buffer = this._ctx.createBuffer(1, length, sampleRate);
+        const samples = buffer.getChannelData(0);
+        const notes = [110, 130.81, 146.83, 174.61, 164.81, 146.83, 130.81, 98,
+            110, 130.81, 164.81, 196, 174.61, 146.83, 130.81, 98];
+        const beatLength = seconds / notes.length;
+        const twoPi = Math.PI * 2;
+
+        for (let i = 0; i < length; i++) {
+            const t = i / sampleRate;
+            const beatPhase = t % beatLength;
+            const beat = Math.min(notes.length - 1, Math.floor(t / beatLength));
+            const noteEnvelope = Math.min(1, beatPhase / 0.025, (beatLength - beatPhase) / 0.08);
+            const edgeEnvelope = Math.min(1, t / 0.12, (seconds - t) / 0.12);
+            const frequency = notes[beat];
+            const bassFrequency = notes[(beat + 8) % notes.length] / 2;
+            const melody = Math.sin(twoPi * frequency * t) * 0.22
+                + Math.sin(twoPi * frequency * 2 * t) * 0.06;
+            const bass = Math.sin(twoPi * bassFrequency * t) * 0.12;
+            const pulse = Math.sin(twoPi * 55 * t) * 0.018;
+            samples[i] = ((melody + bass) * noteEnvelope + pulse) * edgeEnvelope * 0.75;
+        }
+        return buffer;
+    }
+
     _generateAllSounds() {
         const ctx = this._ctx;
         const sr = ctx.sampleRate;
+        this._musicBuffer = this._genFuryFireTheme(sr);
 
         // -- Weapon sounds --
         this._buffers.set('pistol_fire',     this._genPistolFire(sr));

@@ -1,5 +1,5 @@
 // =============================================================================
-// main.js - Main game loop and integration for RETRO FURY
+// main.js - FuryFire by PixelForge Studios
 // =============================================================================
 // This is the central orchestration module. It wires every subsystem together
 // into a playable game: engine (camera, raycaster, renderer, sprite renderer),
@@ -46,6 +46,11 @@ import { TransitionSystem } from './ui/transitions.js';
 import { TextureManager } from './utils/textures.js';
 import { AudioManager } from './audio/audio.js';
 import input from './utils/input.js';
+import { initCrazyGames, startCrazyGamesLoading, stopCrazyGamesLoading, syncCrazyGamesGameplay, celebrateCrazyGamesWin, requestCrazyGamesMidgameAd } from './platform/crazygames.js';
+
+// Keep the PixelForge boot screen visible while the SDK and game initialise.
+const crazyGamesInitialized = await initCrazyGames();
+if (crazyGamesInitialized) startCrazyGamesLoading();
 
 // =============================================================================
 // Constants
@@ -123,12 +128,38 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+function requestPointerLockSafe() {
+    if (!displayCanvas || typeof displayCanvas.requestPointerLock !== 'function') return;
+    try {
+        const result = displayCanvas.requestPointerLock();
+        if (result && typeof result.catch === 'function') result.catch(() => {});
+    } catch (_) { /* Pointer lock is not supported by every browser or host. */ }
+}
+
 // =============================================================================
 // System Initialization
 // =============================================================================
 
 // Input manager - singleton, must be initialized before anything else.
 input.init(displayCanvas);
+displayCanvas.tabIndex = 0;
+
+displayCanvas.addEventListener('click', () => {
+    if (gameState === GameState.TITLE) startCampaign();
+});
+
+// F toggles browser fullscreen where the host allows it.
+window.addEventListener('keydown', (event) => {
+    if (event.code !== 'KeyF' || event.repeat) return;
+    const isFullscreen = !!document.fullscreenElement;
+    const target = isFullscreen ? document : document.documentElement;
+    const action = isFullscreen ? document.exitFullscreen : target.requestFullscreen;
+    if (typeof action !== 'function') return;
+    try {
+        const result = action.call(target);
+        if (result && typeof result.catch === 'function') result.catch(() => {});
+    } catch (_) { /* Fullscreen can be disabled by the host or browser. */ }
+});
 
 // Texture manager generates all procedural textures.
 const textureManager = new TextureManager();
@@ -199,6 +230,19 @@ let isPlanting        = false;
 
 // -- Key tracking for edge detection --
 let prevKeysDown = new Set();
+
+// Losing focus must never leave inputs stuck or allow gameplay behind another tab.
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && gameState === GameState.PLAYING) {
+        gameState = GameState.PAUSED;
+        if (document.pointerLockElement && typeof document.exitPointerLock === 'function') {
+            try { document.exitPointerLock(); } catch (_) { /* Ignore host restrictions. */ }
+        }
+        input.clear();
+        prevKeysDown.clear();
+        audio.stopMusic();
+    }
+});
 
 // -- Death stats for the death screen --
 let deathStats = { kills: 0, time: 0 };
@@ -1002,6 +1046,8 @@ function renderPlaying(dt) {
 // =============================================================================
 
 let lastTimestamp = 0;
+let audioInitStarted = false;
+let adBreakPending = false;
 
 function gameLoop(timestamp) {
     // Calculate delta time in seconds, capped at 1/30 to prevent physics glitches.
@@ -1012,15 +1058,12 @@ function gameLoop(timestamp) {
 
     // Ensure audio is initialized on first user interaction.
     if (!audio.initialized && (input.isKeyDown('Enter') || input.isMouseDown() || input.isPointerLocked())) {
-        audio.init();
-        audio.loadMusic('goldeneye_64.mp3');
+        audioInitStarted = true;
+        audio.init().catch((error) => console.warn('[FuryFire] Audio initialisation failed:', error));
     }
 
     // Background music: play during gameplay, stop otherwise.
-    const shouldPlayMusic = (
-        gameState === GameState.PLAYING ||
-        gameState === GameState.PAUSED
-    );
+    const shouldPlayMusic = gameState === GameState.PLAYING;
     if (shouldPlayMusic && !audio.isMusicPlaying) {
         audio.startMusic();
     } else if (!shouldPlayMusic && audio.isMusicPlaying) {
@@ -1065,6 +1108,9 @@ function gameLoop(timestamp) {
             break;
     }
 
+    // Keep CrazyGames' lifecycle state in sync with actual gameplay, not menus or intermission screens.
+    syncCrazyGamesGameplay(gameState === GameState.PLAYING);
+
     // Blit the off-screen buffer onto the display canvas.
     displayCtx.drawImage(buffer, 0, 0);
 
@@ -1098,33 +1144,24 @@ function updateLoading(dt) {
     }
 }
 
+function startCampaign() {
+    currentLevelIndex = 0;
+    totalKills = 0;
+    totalTime = 0;
+    totalShots = 0;
+    totalHits = 0;
+    persistWeapons = [true, false, false, false, false, false, false];
+    persistAmmo = { bullets: Infinity, shells: 0, rockets: 0, cells: 0 };
+    persistWeaponIdx = 0;
+    loadLevel(0);
+    introCharIndex = 0;
+    transitionSystem.resetElapsed();
+    gameState = GameState.LEVEL_INTRO;
+}
+
 function updateTitle(dt) {
     menuSystem.renderTitle(bufferCtx);
-
-    // Handle mode selection keys (W/S to navigate, Enter to confirm).
-    const keyCodes = ['KeyW', 'KeyS', 'ArrowUp', 'ArrowDown', 'Enter'];
-    for (const code of keyCodes) {
-        if (wasKeyJustPressed(code)) {
-            const result = menuSystem.handleTitleKey(code);
-            if (result === 'singleplayer') {
-                // Start single player from level 1.
-                currentLevelIndex = 0;
-                totalKills = 0;
-                totalTime  = 0;
-                totalShots = 0;
-                totalHits  = 0;
-                persistWeapons   = [true, false, false, false, false, false, false];
-                persistAmmo      = { bullets: Infinity, shells: 0, rockets: 0, cells: 0 };
-                persistWeaponIdx = 0;
-
-                loadLevel(0);
-
-                introCharIndex = 0;
-                transitionSystem.resetElapsed();
-                gameState = GameState.LEVEL_INTRO;
-            }
-        }
-    }
+    if (wasKeyJustPressed('Enter') || wasKeyJustPressed('Space')) startCampaign();
 }
 
 function updateLevelIntro(dt) {
@@ -1149,7 +1186,7 @@ function updateLevelIntro(dt) {
 
         // Request pointer lock for gameplay.
         if (displayCanvas && !input.isPointerLocked()) {
-            displayCanvas.requestPointerLock();
+            requestPointerLockSafe();
         }
     }
 }
@@ -1159,7 +1196,7 @@ function updatePaused() {
     if (wasKeyJustPressed('Escape')) {
         gameState = GameState.PLAYING;
         if (displayCanvas && !input.isPointerLocked()) {
-            displayCanvas.requestPointerLock();
+            requestPointerLockSafe();
         }
         return;
     }
@@ -1170,7 +1207,7 @@ function updatePaused() {
         prevPlayerHealth = player ? player.health : 100;
         gameState = GameState.PLAYING;
         if (displayCanvas && !input.isPointerLocked()) {
-            displayCanvas.requestPointerLock();
+            requestPointerLockSafe();
         }
         return;
     }
@@ -1190,31 +1227,51 @@ function updateDeath(dt) {
         prevPlayerHealth = player ? player.health : 100;
         gameState = GameState.PLAYING;
         if (displayCanvas && !input.isPointerLocked()) {
-            displayCanvas.requestPointerLock();
+            requestPointerLockSafe();
         }
+    }
+}
+
+function continueAfterLevelComplete() {
+    if (currentLevelIndex >= LEVEL_DATA.length - 1) {
+        victoryStats = {
+            totalKills,
+            totalTime,
+            accuracy: totalShots > 0 ? (totalHits / totalShots) * 100 : 0,
+        };
+        gameState = GameState.VICTORY;
+        celebrateCrazyGamesWin();
+    } else {
+        loadLevel(currentLevelIndex + 1);
+        introCharIndex = 0;
+        transitionSystem.resetElapsed();
+        gameState = GameState.LEVEL_INTRO;
     }
 }
 
 function updateLevelComplete(dt) {
     transitionSystem.renderLevelComplete(bufferCtx, completeStats);
+    if (!wasKeyJustPressed('Enter') || adBreakPending) return;
 
-    if (wasKeyJustPressed('Enter')) {
-        if (currentLevelIndex >= LEVEL_DATA.length - 1) {
-            // All levels completed - victory!
-            victoryStats = {
-                totalKills,
-                totalTime,
-                accuracy: totalShots > 0 ? (totalHits / totalShots) * 100 : 0,
-            };
-            gameState = GameState.VICTORY;
-        } else {
-            // Advance to next level.
-            loadLevel(currentLevelIndex + 1);
-            introCharIndex = 0;
-            transitionSystem.resetElapsed();
-            gameState = GameState.LEVEL_INTRO;
-        }
+    // One optional midgame ad at a genuine mission break, after mission 3.
+    if (crazyGamesInitialized && currentLevelIndex === 2) {
+        adBreakPending = true;
+        requestCrazyGamesMidgameAd({
+            onStarted: () => audio.mute(),
+            onFinished: () => {
+                audio.unmute();
+                adBreakPending = false;
+                continueAfterLevelComplete();
+            },
+            onError: () => {
+                audio.unmute();
+                adBreakPending = false;
+                continueAfterLevelComplete();
+            },
+        });
+        return;
     }
+    continueAfterLevelComplete();
 }
 
 function updateVictory(dt) {
@@ -1229,4 +1286,6 @@ function updateVictory(dt) {
 // Start the Game
 // =============================================================================
 
+stopCrazyGamesLoading();
+window.dispatchEvent(new Event('pixelforge:game-ready'));
 requestAnimationFrame(gameLoop);
