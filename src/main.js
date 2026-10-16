@@ -190,6 +190,7 @@ const spriteRenderer = new SpriteRenderer(512);
 const hud             = new HUD(SCREEN_WIDTH, SCREEN_HEIGHT);
 const minimap         = new Minimap(SCREEN_WIDTH, SCREEN_HEIGHT);
 const menuSystem      = new MenuSystem(SCREEN_WIDTH, SCREEN_HEIGHT);
+try { menuSystem.setScanlinesEnabled(localStorage.getItem('furyfire.scanlines') !== 'false'); } catch (_) { /* Storage can be disabled. */ }
 const objectiveSystem = new ObjectiveSystem();
 const transitionSystem = new TransitionSystem(SCREEN_WIDTH, SCREEN_HEIGHT);
 
