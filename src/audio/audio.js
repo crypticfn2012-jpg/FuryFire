@@ -40,6 +40,9 @@ export class AudioManager {
         /** @type {AudioBufferSourceNode|null} */
         this._musicSource = null;
 
+        /** Replace repeated automatic-fire voices so long samples do not stack. */
+        this._replaceableSources = new Map();
+
         /** @type {GainNode|null} */
         this._musicGain = null;
 
@@ -76,7 +79,9 @@ export class AudioManager {
         this._masterGain.connect(this._ctx.destination);
 
         this._generateAllSounds();
+        // Keep generated fallbacks ready, then replace matching effects with the authored MP3 assets.
         this._initialized = true;
+        await this._loadBundledSounds();
     }
 
     /**
@@ -97,8 +102,22 @@ export class AudioManager {
         const volume = options.volume !== undefined ? options.volume : 1.0;
         const pan    = options.pan    !== undefined ? options.pan    : 0.0;
 
+        if (name === 'machinegun_fire') {
+            const previous = this._replaceableSources.get(name);
+            if (previous) {
+                try { previous.stop(); } catch (_) { /* already ended */ }
+                this._replaceableSources.delete(name);
+            }
+        }
+
         const source = this._ctx.createBufferSource();
         source.buffer = buffer;
+        if (name === 'machinegun_fire') {
+            this._replaceableSources.set(name, source);
+            source.addEventListener('ended', () => {
+                if (this._replaceableSources.get(name) === source) this._replaceableSources.delete(name);
+            }, { once: true });
+        }
 
         // Per-sound gain
         const gain = this._ctx.createGain();
@@ -217,6 +236,30 @@ export class AudioManager {
     // -------------------------------------------------------------------------
     // Internal - Sound Generation
     // -------------------------------------------------------------------------
+
+    /**
+     * Decode authored one-shot effects. Missing files retain their procedural fallback.
+     * @private
+     */
+    async _loadBundledSounds() {
+        const assets = [
+            ['pistol_fire', 'Pistol.mp3'], ['shotgun_fire', 'shotgun.mp3'],
+            ['machinegun_fire', 'MachineGun.mp3'], ['plasma_fire', 'Plasma Rifle.mp3'],
+            ['sniper_fire', 'Sniper Rifle.mp3'], ['explosion', 'Explosion.mp3'],
+            ['enemy_pain', 'EnemyHurtGrunt.mp3'], ['player_hurt', 'HurtGrunt.mp3'],
+            ['weapon_cock', 'GunCock(Universal).mp3'], ['knife_pullout', 'KnifePullout.mp3'],
+        ];
+        await Promise.all(assets.map(async ([name, filename]) => {
+            try {
+                const response = await fetch(new URL(filename, import.meta.url));
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const encoded = await response.arrayBuffer();
+                this._buffers.set(name, await this._ctx.decodeAudioData(encoded));
+            } catch (error) {
+                console.warn('[AudioManager] Using fallback for ' + filename + ':', error);
+            }
+        }));
+    }
 
     /** @private */
     _genFuryFireTheme(sampleRate) {

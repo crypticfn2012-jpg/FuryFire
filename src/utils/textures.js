@@ -456,49 +456,114 @@ function generateDoorLocked() {
  * @param {object} opts - Additional options
  */
 function drawHumanoid(img, ox, fw, bodyR, bodyG, bodyB, opts = {}) {
-    const fh = 64;
-    const cx = ox + (fw >> 1); // center x of frame
-    const headR = opts.headR || 200;
-    const headG = opts.headG || 170;
-    const headB = opts.headB || 140;
-    const scale = opts.scale || 1.0;
-    const headY = opts.headY || 12;
+    const cx = ox + (fw >> 1), scale = opts.scale || 1.0;
+    const headY = opts.headY ?? 8;
     const headSize = Math.round((opts.headSize || 5) * scale);
     const bodyW = Math.round((opts.bodyW || 12) * scale);
-    const bodyH = Math.round((opts.bodyH || 18) * scale);
-    const bodyTop = headY + headSize + 1;
+    const bodyH = Math.round((opts.bodyH || 17) * scale);
+    const bodyTop = headY + headSize + 2;
     const legH = Math.round((opts.legH || 14) * scale);
     const legW = Math.round((opts.legW || 4) * scale);
-    const armW = Math.round(3 * scale);
+    const armW = Math.max(3, Math.round(3 * scale));
     const armH = Math.round((opts.armH || 14) * scale);
-    const darkR = (bodyR * 0.6) | 0;
-    const darkG = (bodyG * 0.6) | 0;
-    const darkB = (bodyB * 0.6) | 0;
-
-    // Head
-    fillCircle(img, cx, headY + headSize, headSize, headR, headG, headB);
-    // Eyes
-    setPixel(img, cx - 2, headY + headSize - 1, 20, 20, 20);
-    setPixel(img, cx + 2, headY + headSize - 1, 20, 20, 20);
-
-    // Body
-    fillRect(img, cx - (bodyW >> 1), bodyTop, bodyW, bodyH, bodyR, bodyG, bodyB);
-
-    // Arms
-    const armLeftX = cx - (bodyW >> 1) - armW;
-    const armRightX = cx + (bodyW >> 1);
-    fillRect(img, armLeftX, bodyTop + 1, armW, armH, darkR, darkG, darkB);
-    fillRect(img, armRightX, bodyTop + 1, armW, armH, darkR, darkG, darkB);
-
-    // Legs
-    const legTop = bodyTop + bodyH;
+    const darkR = Math.floor(bodyR * 0.48), darkG = Math.floor(bodyG * 0.48), darkB = Math.floor(bodyB * 0.48);
+    const accent = opts.accent || [Math.min(bodyR + 42, 255), Math.min(bodyG + 42, 255), Math.min(bodyB + 42, 255)];
+    const visor = opts.visor || [27, 46, 54];
+    const helmetStyle = opts.helmetStyle || 'standard';
+    const glove = [31, 36, 38], legTop = bodyTop + bodyH;
     const legGap = Math.max(1, Math.round(2 * scale));
-    fillRect(img, cx - legGap - legW, legTop, legW, legH, darkR, darkG, darkB);
-    fillRect(img, cx + legGap, legTop, legW, legH, darkR, darkG, darkB);
+    const armLeftX = cx - (bodyW >> 1) - armW, armRightX = cx + (bodyW >> 1);
 
-    // Belt
-    fillRect(img, cx - (bodyW >> 1), bodyTop + bodyH - 2, bodyW, 2, 40, 35, 30);
+    // Segmented boots, shin plates and knee pads.
+    fillRect(img, cx - legGap - legW - 1, legTop, legW + 2, legH, 23, 26, 29);
+    fillRect(img, cx + legGap - 1, legTop, legW + 2, legH, 23, 26, 29);
+    fillRect(img, cx - legGap - legW, legTop + 1, legW, Math.max(2, legH - 5), darkR, darkG, darkB);
+    fillRect(img, cx + legGap, legTop + 1, legW, Math.max(2, legH - 5), darkR, darkG, darkB);
+    fillRect(img, cx - legGap - legW, legTop + 3, legW, 4, 65, 69, 69);
+    fillRect(img, cx + legGap, legTop + 3, legW, 4, 65, 69, 69);
+    hLine(img, cx - legGap - legW, cx - legGap - 1, legTop + 3, 132, 134, 128);
+    hLine(img, cx + legGap, cx + legGap + legW - 1, legTop + 3, 132, 134, 128);
+    fillRect(img, cx - legGap - legW - 2, legTop + legH - 5, legW + 3, 5, 19, 21, 23);
+    fillRect(img, cx + legGap - 1, legTop + legH - 5, legW + 3, 5, 19, 21, 23);
+    hLine(img, cx - legGap - legW - 1, cx - legGap, legTop + legH - 5, 100, 102, 98);
+    hLine(img, cx + legGap, cx + legGap + legW + 1, legTop + legH - 5, 100, 102, 98);
 
+    // Arms with sleeve seams and combat gloves.
+    fillRect(img, armLeftX - 1, bodyTop + 1, armW + 2, armH, 25, 28, 30);
+    fillRect(img, armRightX - 1, bodyTop + 1, armW + 2, armH, 25, 28, 30);
+    fillRect(img, armLeftX, bodyTop + 2, armW, armH - 1, darkR, darkG, darkB);
+    fillRect(img, armRightX, bodyTop + 2, armW, armH - 1, darkR, darkG, darkB);
+    hLine(img, armLeftX, armLeftX + armW - 1, bodyTop + 4, accent[0], accent[1], accent[2]);
+    hLine(img, armRightX, armRightX + armW - 1, bodyTop + 4, accent[0], accent[1], accent[2]);
+    fillRect(img, armLeftX, bodyTop + armH - 4, armW, 5, 31, 36, 38);
+    fillRect(img, armRightX, bodyTop + armH - 4, armW, 5, 31, 36, 38);
+
+    // Layered vest, raised chest plate, webbing, magazines and belt buckle.
+    fillRect(img, cx - (bodyW >> 1) - 2, bodyTop - 1, bodyW + 4, bodyH + 2, 21, 24, 26);
+    fillRect(img, cx - (bodyW >> 1), bodyTop, bodyW, bodyH, bodyR, bodyG, bodyB);
+    fillRect(img, cx - (bodyW >> 1) + 1, bodyTop + 1, Math.max(2, bodyW - 3), Math.max(3, bodyH - 3), darkR, darkG, darkB);
+    fillRect(img, cx - (bodyW >> 1) + 2, bodyTop + 2, Math.max(2, bodyW - 5), Math.max(3, bodyH - 6), bodyR, bodyG, bodyB);
+    fillRect(img, cx - Math.floor(bodyW * 0.28), bodyTop + 2, Math.max(4, Math.floor(bodyW * 0.56)), Math.max(5, Math.floor(bodyH * 0.42)), Math.min(bodyR + 18, 255), Math.min(bodyG + 18, 255), Math.min(bodyB + 18, 255));
+    vLine(img, cx - Math.floor(bodyW * 0.28), bodyTop + 2, bodyTop + Math.floor(bodyH * 0.42), accent[0], accent[1], accent[2]);
+    hLine(img, cx - (bodyW >> 1) + 1, cx + (bodyW >> 1) - 1, bodyTop + bodyH - 4, 34, 36, 35);
+    const pouchY = bodyTop + Math.floor(bodyH * 0.52);
+    for (let p = 0; p < 3; p++) {
+        const px = cx - Math.floor(bodyW / 2) + 2 + p * Math.max(3, Math.floor((bodyW - 5) / 3));
+        fillRect(img, px, pouchY, Math.max(2, Math.floor(bodyW / 4)), 4, 42, 45, 42);
+        hLine(img, px, px + Math.max(1, Math.floor(bodyW / 4)) - 1, pouchY, 103, 106, 94);
+        setPixel(img, px + 1, pouchY + 2, 152, 147, 112);
+    }
+    fillRect(img, cx - 2, bodyTop + bodyH - 3, 5, 3, 157, 145, 104);
+    setPixel(img, cx, bodyTop + bodyH - 2, 34, 37, 37);
+
+    // Helmets with readable brow, ear protection and distinct face shields.
+    if (opts.helmet !== false) {
+        fillRect(img, cx - headSize - 3, headY + 1, headSize * 2 + 6, headSize + 3, 22, 25, 27);
+        fillRect(img, cx - headSize - 2, headY, headSize * 2 + 4, headSize + 2, Math.floor(bodyR * 0.68), Math.floor(bodyG * 0.68), Math.floor(bodyB * 0.68));
+        fillRect(img, cx - headSize, headY + 1, headSize * 2, Math.max(2, headSize - 1), bodyR, bodyG, bodyB);
+        hLine(img, cx - headSize, cx + headSize - 1, headY + 1, accent[0], accent[1], accent[2]);
+        fillRect(img, cx - headSize - 2, headY + headSize, headSize * 2 + 4, 2, 21, 24, 26);
+        if (helmetStyle === 'visor') {
+            fillRect(img, cx - headSize - 1, headY + headSize - 1, headSize * 2 + 2, 4, visor[0], visor[1], visor[2]);
+            hLine(img, cx - headSize, cx + headSize, headY + headSize - 1, Math.min(visor[0] + 50, 255), Math.min(visor[1] + 60, 255), Math.min(visor[2] + 60, 255));
+        } else {
+            fillRect(img, cx - headSize + 1, headY + headSize, headSize * 2 - 2, 2, visor[0], visor[1], visor[2]);
+            setPixel(img, cx - 1, headY + headSize, Math.min(visor[0] + 55, 255), Math.min(visor[1] + 65, 255), Math.min(visor[2] + 65, 255));
+        }
+        fillRect(img, cx - headSize - 3, headY + 2, 2, 4, 74, 78, 76);
+        fillRect(img, cx + headSize + 1, headY + 2, 2, 4, 74, 78, 76);
+        if (helmetStyle === 'infantry') {
+            fillRect(img, cx - 1, headY - 1, 3, 2, accent[0], accent[1], accent[2]);
+        } else if (helmetStyle === 'recon') {
+            fillRect(img, cx + headSize + 2, headY, 1, 6, 90, 97, 101);
+            setPixel(img, cx + headSize + 2, headY - 1, accent[0], accent[1], accent[2]);
+        }
+    } else {
+        fillCircle(img, cx, headY + headSize, headSize, 145, 116, 94);
+        fillRect(img, cx - 3, headY + headSize - 1, 6, 3, 35, 29, 25);
+    }
+
+    // Compact rifle held across the vest, with a metal top edge and muzzle.
+    const gunY = bodyTop + Math.max(3, Math.floor(bodyH * 0.38));
+    fillRect(img, cx + 1, gunY, Math.max(7, Math.round(14 * scale)), 3, 21, 24, 26);
+    fillRect(img, cx + 2, gunY - 1, Math.max(5, Math.round(11 * scale)), 1, 135, 140, 137);
+    fillRect(img, cx + Math.round(7 * scale), gunY + 2, Math.max(3, Math.round(4 * scale)), 4, 39, 42, 41);
+    fillRect(img, cx + Math.round(10 * scale), gunY + 1, Math.max(3, Math.round(9 * scale)), 2, 31, 34, 35);
+    fillRect(img, cx + Math.round(13 * scale), gunY, Math.max(3, Math.round(4 * scale)), 2, 137, 140, 137);
+    setPixel(img, cx + Math.round(14 * scale), gunY, 196, 199, 192);
+
+    // Heavy units have wider shoulder plates and a contrasting insignia.
+    if (opts.heavyArmor) {
+        fillRect(img, cx - (bodyW >> 1) - 3, bodyTop, 5, Math.max(5, Math.floor(bodyH * 0.42)), 28, 31, 34);
+        fillRect(img, cx + (bodyW >> 1) - 2, bodyTop, 5, Math.max(5, Math.floor(bodyH * 0.42)), 28, 31, 34);
+        hLine(img, cx - (bodyW >> 1) - 2, cx - (bodyW >> 1) + 1, bodyTop + 1, accent[0], accent[1], accent[2]);
+        hLine(img, cx + (bodyW >> 1) - 1, cx + (bodyW >> 1) + 2, bodyTop + 1, accent[0], accent[1], accent[2]);
+        fillRect(img, cx - 2, bodyTop + 5, 4, 5, 31, 35, 38);
+        fillRect(img, cx - 1, bodyTop + 6, 2, 3, accent[0], accent[1], accent[2]);
+    } else {
+        fillRect(img, cx - (bodyW >> 1) - 2, bodyTop + 1, 3, 5, bodyR, bodyG, bodyB);
+        fillRect(img, cx + (bodyW >> 1) - 1, bodyTop + 1, 3, 5, bodyR, bodyG, bodyB);
+    }
     return { cx, bodyTop, bodyW, bodyH, armRightX, armW, armH, legTop, legH };
 }
 
@@ -517,10 +582,19 @@ function drawHumanoidWalk(img, ox, fw, bodyR, bodyG, bodyB, opts = {}, frame = 0
 
     // Clear existing legs and redraw shifted
     const shift = frame === 0 ? 2 : -2;
-    fillRect(img, parts.cx - legGap - legW, parts.legTop, legW, legH, 0, 0, 0, 0);
-    fillRect(img, parts.cx + legGap, parts.legTop, legW, legH, 0, 0, 0, 0);
-    fillRect(img, parts.cx - legGap - legW + shift, parts.legTop, legW, legH, darkR, darkG, darkB);
-    fillRect(img, parts.cx + legGap - shift, parts.legTop, legW, legH, darkR, darkG, darkB);
+    const clearX = parts.cx - legGap - legW - 2;
+    const clearW = (parts.cx + legGap + legW + 2) - clearX;
+    fillRect(img, clearX, parts.legTop, clearW, legH, 0, 0, 0, 0);
+    const leftX = parts.cx - legGap - legW + shift;
+    const rightX = parts.cx + legGap - shift;
+    fillRect(img, leftX - 1, parts.legTop, legW + 2, legH, 23, 26, 29);
+    fillRect(img, rightX - 1, parts.legTop, legW + 2, legH, 23, 26, 29);
+    fillRect(img, leftX, parts.legTop + 1, legW, Math.max(2, legH - 5), darkR, darkG, darkB);
+    fillRect(img, rightX, parts.legTop + 1, legW, Math.max(2, legH - 5), darkR, darkG, darkB);
+    fillRect(img, leftX, parts.legTop + 3, legW, 4, 65, 69, 69);
+    fillRect(img, rightX, parts.legTop + 3, legW, 4, 65, 69, 69);
+    fillRect(img, leftX - 1, parts.legTop + legH - 5, legW + 2, 5, 19, 21, 23);
+    fillRect(img, rightX - 1, parts.legTop + legH - 5, legW + 2, 5, 19, 21, 23);
     return parts;
 }
 
@@ -616,52 +690,39 @@ function generateEnemySpriteSheet(id, bodyR, bodyG, bodyB, opts = {}) {
 }
 
 function generateGrunt() {
-    return generateEnemySpriteSheet(100, 60, 120, 50); // Green uniform
+    return generateEnemySpriteSheet(100, 60, 112, 50, {
+        bodyW: 12, bodyH: 17, helmetStyle: 'infantry', accent: [150, 166, 113], visor: [39, 57, 47],
+    });
 }
 
 function generateSoldier() {
-    return generateEnemySpriteSheet(101, 50, 70, 140, { // Blue uniform
-        bodyW: 14,
-        armH: 15,
+    return generateEnemySpriteSheet(101, 43, 69, 115, { // Armoured security soldier
+        bodyW: 14, bodyH: 18, armH: 15, helmetStyle: 'visor',
+        accent: [110, 157, 211], visor: [55, 114, 152],
     });
 }
 
 function generateScout() {
-    return generateEnemySpriteSheet(102, 160, 160, 170, { // Light grey
-        bodyW: 10,
-        bodyH: 16,
-        legH: 16,
+    return generateEnemySpriteSheet(102, 116, 123, 128, { // Lightweight recon suit
+        bodyW: 10, bodyH: 16, legH: 16, legW: 3, helmetStyle: 'recon',
+        accent: [190, 196, 192], visor: [63, 91, 101],
     });
 }
 
 function generateBrute() {
-    return generateEnemySpriteSheet(103, 80, 80, 90, { // Heavy armor
-        frameWidth: 128,
-        scale: 1.8,
-        headSize: 5,
-        bodyW: 16,
-        bodyH: 20,
-        legW: 6,
-        legH: 12,
-        armH: 16,
-        headY: 6,
+    return generateEnemySpriteSheet(103, 76, 82, 87, { // Heavy assault armour
+        scale: 1.22, headSize: 5, bodyW: 15, bodyH: 18,
+        legW: 5, legH: 11, armH: 15, headY: 5,
+        accent: [184, 151, 78], visor: [63, 74, 72], heavyArmor: true,
     });
 }
 
 function generateCommander() {
-    return generateEnemySpriteSheet(104, 160, 30, 30, { // Red/black armor
-        frameWidth: 128,
-        scale: 2.0,
-        headSize: 6,
-        bodyW: 18,
-        bodyH: 22,
-        legW: 7,
-        legH: 10,
-        armH: 18,
-        headY: 4,
-        headR: 180,
-        headG: 160,
-        headB: 140,
+    return generateEnemySpriteSheet(104, 128, 37, 34, { // Distinct red command armour
+        scale: 1.25, headSize: 6, bodyW: 15, bodyH: 19,
+        legW: 5, legH: 11, armH: 16, headY: 4, helmetStyle: 'visor',
+        headR: 180, headG: 160, headB: 140,
+        accent: [232, 78, 57], visor: [98, 24, 22], heavyArmor: true,
     });
 }
 
@@ -902,18 +963,23 @@ const HUD_FRAMES = 3;
  * Returns the grip top position for weapon attachment.
  */
 function drawHUDHand(img, ox, oy) {
-    // Skin-colored hand/fist
-    const skinR = 200, skinG = 160, skinB = 130;
-    // Wrist
-    fillRect(img, ox + 52, oy + 95, 24, 18, skinR, skinG, skinB);
-    // Fingers wrapped
-    fillRect(img, ox + 50, oy + 85, 28, 12, skinR - 10, skinG - 10, skinB - 10);
-    // Thumb
-    fillRect(img, ox + 48, oy + 88, 6, 8, skinR + 10, skinG, skinB);
-    // Knuckle highlights
+    // Dark field gloves read as tactical kit rather than bare cartoon hands.
+    const wristY = oy + 96;
+    fillRect(img, ox + 51, wristY, 26, 18, 30, 35, 38);
+    fillRect(img, ox + 53, wristY + 1, 22, 15, 63, 68, 66);
+    fillRect(img, ox + 52, oy + 86, 27, 13, 40, 44, 43);
+    fillRect(img, ox + 54, oy + 87, 22, 9, 76, 79, 73);
     for (let i = 0; i < 4; i++) {
-        setPixel(img, ox + 53 + i * 6, oy + 85, skinR + 20, skinG + 10, skinB);
+        const fx = ox + 53 + i * 6;
+        fillRect(img, fx, oy + 84, 5, 10, 48, 53, 51);
+        fillRect(img, fx + 1, oy + 85, 3, 6, 91, 94, 85);
+        hLine(img, fx + 1, fx + 3, oy + 86, 126, 128, 114);
     }
+    fillRect(img, ox + 47, oy + 88, 8, 9, 45, 50, 47);
+    fillRect(img, ox + 48, oy + 89, 5, 5, 88, 92, 82);
+    fillRect(img, ox + 51, wristY, 26, 4, 26, 31, 33);
+    hLine(img, ox + 53, ox + 74, wristY + 1, 100, 103, 95);
+    for (let sx = 55; sx < 75; sx += 5) setPixel(img, ox + sx, oy + 92, 116, 118, 104);
     return { gripX: ox + 52, gripY: oy + 80 };
 }
 
@@ -938,6 +1004,17 @@ function generatePistolHUD() {
         fillRect(img, ox + 63, 40 + recoil, 3, 3, 110, 110, 110);
 
         // Muzzle flash on fire frames
+        // Machined slide serrations, bore, safety and textured grip panels.
+        for (let sy = 53; sy < 60; sy += 2) {
+            vLine(img, ox + 57, sy + recoil, sy + 1 + recoil, 42, 45, 49);
+            vLine(img, ox + 70, sy + recoil, sy + 1 + recoil, 145, 148, 151);
+        }
+        hLine(img, ox + 56, ox + 71, 51 + recoil, 132, 135, 139);
+        fillRect(img, ox + 62, 41 + recoil, 4, 2, 22, 24, 27);
+        fillRect(img, ox + 62, 42 + recoil, 4, 1, 5, 6, 8);
+        fillRect(img, ox + 60, 63 + recoil, 8, 2, 48, 49, 50);
+        strokeRect(img, ox + 55, 67 + recoil, 18, 10, 39, 41, 42);
+        for (let gy = 70; gy < 77; gy += 2) hLine(img, ox + 57, ox + 70, gy + recoil, 69, 67, 61);
         if (f === 1) {
             fillCircle(img, ox + 64, 32, 8, 255, 255, 150);
             fillCircle(img, ox + 64, 32, 5, 255, 255, 220);
@@ -973,6 +1050,16 @@ function generateShotgunHUD() {
         // Wood stock
         fillRect(img, ox + 52, 80 + recoil, 24, 10, 120, 80, 40);
 
+        // Twin-bore detailing, heat vents and a machined pump.
+        hLine(img, ox + 56, ox + 69, 31 + recoil, 130, 133, 137);
+        for (let vy = 36; vy < 53; vy += 4) {
+            setPixel(img, ox + 58, vy + recoil, 28, 29, 32);
+            setPixel(img, ox + 66, vy + recoil, 28, 29, 32);
+        }
+        strokeRect(img, ox + 49, 59 + recoil, 30, 12, 38, 38, 38);
+        for (let gx = 52; gx < 76; gx += 4) vLine(img, gx, 66 + recoil, 69 + recoil, 142, 117, 78);
+        hLine(img, ox + 53, ox + 75, 82 + recoil, 153, 105, 57);
+        fillRect(img, ox + 66, 72 + recoil, 3, 2, 26, 28, 30);
         if (f === 1) {
             fillCircle(img, ox + 59, 22, 10, 255, 255, 150);
             fillCircle(img, ox + 67, 22, 10, 255, 255, 150);
@@ -1012,6 +1099,16 @@ function generateMachinegunHUD() {
         // Stock
         fillRect(img, ox + 52 + shakeX, 82 + recoil, 24, 8, 100, 80, 50);
 
+        // Picatinny rail, vents, receiver seam and ribbed magazine.
+        fillRect(img, ox + 53 + shakeX, 51 + recoil, 22, 4, 45, 47, 50);
+        for (let rx = 55; rx < 74; rx += 3) vLine(img, ox + rx + shakeX, 51 + recoil, 53 + recoil, 118, 120, 123);
+        for (let vy = 33; vy < 53; vy += 4) {
+            fillRect(img, ox + 59 + shakeX, vy + recoil, 2, 2, 35, 37, 40);
+            fillRect(img, ox + 67 + shakeX, vy + recoil, 2, 2, 35, 37, 40);
+        }
+        strokeRect(img, ox + 53 + shakeX, 75 + recoil, 10, 14, 35, 37, 40);
+        for (let my = 77; my < 88; my += 3) hLine(img, ox + 55 + shakeX, ox + 60 + shakeX, my + recoil, 100, 101, 96);
+        fillRect(img, ox + 73 + shakeX, 57 + recoil, 4, 9, 120, 120, 117);
         if (f === 1) {
             fillCircle(img, ox + 64 + shakeX, 22, 7, 255, 255, 160);
             fillCircle(img, ox + 64 + shakeX, 22, 4, 255, 255, 230);
@@ -1047,6 +1144,14 @@ function generateRocketLauncherHUD() {
         // Warning stripe
         fillRect(img, ox + 42, 67 + recoil, 44, 3, 180, 160, 30);
 
+        // Reinforced launch tube rings, caution band and optical sight.
+        strokeRect(img, ox + 49, 31 + recoil, 30, 20, 35, 44, 31);
+        fillRect(img, ox + 49, 43 + recoil, 30, 3, 165, 138, 38);
+        for (let hx = 50; hx < 78; hx += 5) setPixel(img, ox + hx, 44 + recoil, 35, 35, 26);
+        fillRect(img, ox + 61, 39 + recoil, 7, 3, 25, 32, 25);
+        fillRect(img, ox + 62, 39 + recoil, 4, 1, 100, 160, 95);
+        hLine(img, ox + 45, ox + 80, 53 + recoil, 116, 129, 97);
+        fillRect(img, ox + 46, 59 + recoil, 5, 10, 42, 48, 38);
         if (f === 1) {
             // Rocket launch exhaust
             fillCircle(img, ox + 64, 22, 12, 255, 200, 80);
@@ -1092,6 +1197,16 @@ function generatePlasmaRifleHUD() {
         // Stock
         fillRect(img, ox + 50, 74 + recoil, 28, 8, 60, 65, 80);
 
+        // Contained energy chamber, insulated coil gaps and status indicators.
+        strokeRect(img, ox + 46, 52 + recoil, 36, 22, 35, 43, 55);
+        for (let cy = 37; cy < 52; cy += 4) {
+            fillRect(img, ox + 54, cy + recoil, 20, 2, 25, 87, 113);
+            hLine(img, ox + 55, ox + 72, cy + recoil, 110, 220, 238);
+        }
+        fillRect(img, ox + 49, 62 + recoil, 8, 4, 4, 30, 45);
+        setPixel(img, ox + 51, 63 + recoil, 75, 245, 255);
+        setPixel(img, ox + 54, 63 + recoil, 30, 190, 235);
+        hLine(img, ox + 50, ox + 77, 74 + recoil, 115, 120, 131);
         if (f === 1) {
             // Plasma bolt at muzzle
             fillCircle(img, ox + 64, 24, 10, 0, 200, 255);
@@ -1151,6 +1266,14 @@ function generateSniperRifleHUD() {
         fillRect(img, ox + 60, 18 + recoil, 8, 3, 50, 50, 55);
 
         // Muzzle flash on fire frames
+        // Scope glass, elevation turrets, bolt and stock grip texture.
+        fillRect(img, ox + 57, 36 + recoil, 14, 4, 25, 54, 67);
+        fillRect(img, ox + 58, 36 + recoil, 11, 2, 88, 168, 185);
+        vLine(img, ox + 63, 35 + recoil, 39 + recoil, 220, 235, 230);
+        fillRect(img, ox + 70, 39 + recoil, 4, 5, 60, 64, 67);
+        fillRect(img, ox + 50, 62 + recoil, 8, 3, 120, 122, 123);
+        fillRect(img, ox + 76, 62 + recoil, 4, 8, 47, 50, 52);
+        for (let gx = 52; gx < 76; gx += 4) vLine(img, gx, 83 + recoil, 88 + recoil, 80, 58, 36);
         if (f === 1) {
             // Bright sharp flash
             fillCircle(img, ox + 64, 10, 10, 255, 255, 180);

@@ -717,7 +717,11 @@ function updatePlaying(dt) {
     handleInteractions();
 
     // 5. Update weapon system.
+    const weaponBeforeInput = player.currentWeapon;
     const fireResult = weaponSystem.update(dt, input, player, enemies, map);
+    if (player.currentWeapon !== weaponBeforeInput) {
+        audio.play(player.currentWeapon === 6 ? 'knife_pullout' : 'weapon_cock', { volume: 0.72 });
+    }
 
     // 6. Handle weapon fire results.
     if (fireResult && fireResult.empty) {
@@ -1134,10 +1138,13 @@ function updateLoading(dt) {
     bufferCtx.fillStyle = '#000000';
     bufferCtx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    bufferCtx.font = 'bold 12px "Courier New", Courier, monospace';
-    bufferCtx.fillStyle = '#FF6622';
+    bufferCtx.font = 'bold 14px "Courier New", Courier, monospace';
     bufferCtx.textAlign = 'center';
     bufferCtx.textBaseline = 'middle';
+    bufferCtx.lineWidth = 2;
+    bufferCtx.strokeStyle = '#4a1b0b';
+    bufferCtx.strokeText('LOADING...', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+    bufferCtx.fillStyle = '#ff854b';
     bufferCtx.fillText('LOADING...', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 
     // Textures are generated synchronously in the constructor, so we can
