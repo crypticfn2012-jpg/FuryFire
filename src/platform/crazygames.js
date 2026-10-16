@@ -27,6 +27,14 @@ export async function initCrazyGames() {
         sdkReady = await Promise.race([initTask, timeoutTask]);
         if (sdkReady) {
             console.info('[CrazyGames] SDK v3 initialised.');
+            const game = window.CrazyGames.SDK.game;
+            const applyPlatformSettings = (settings) => {
+                window.dispatchEvent(new CustomEvent('furyfire:platform-mute', { detail: { muted: Boolean(settings && settings.muteAudio) } }));
+            };
+            if (game) {
+                try { applyPlatformSettings(game.settings); } catch (_) { /* Settings may not be exposed in a portal build. */ }
+                if (typeof game.addSettingsChangeListener === 'function') game.addSettingsChangeListener(applyPlatformSettings);
+            }
         } else {
             console.warn('[CrazyGames] SDK did not initialise in time; continuing without platform features.');
         }
