@@ -1,109 +1,66 @@
-# Retro Fury
+# FuryFire — PixelForge Studios
 
-A retro-style first-person shooter inspired by Wolfenstein 3D and DOOM, built entirely with vanilla JavaScript and HTML5 Canvas. No frameworks, no build tools — just open `index.html` and play.
+FuryFire is a retro first-person shooter built with vanilla JavaScript and HTML5 Canvas. It uses a custom raycasting engine, five connected campaign missions, seven weapon slots, enemy AI, objectives, pickups, and a multi-phase boss fight.
 
-All textures and audio are procedurally generated at runtime. Zero external assets required.
+FuryFire's startup screen uses the same black PixelForge Studios logo/progress intro as Stack Shift. The game also uses original synthesised sound effects and an original generated background-music loop.
 
-## Gameplay
+## Run locally
 
-### Single-Player Campaign
+Serve the folder over HTTP because the game uses JavaScript ES modules. Do not open `index.html` directly with `file://`.
 
-Fight through 5 progressively harder levels, each with unique objectives:
+    python -m http.server 8000
 
-| Level | Name | Objective | Enemy Types |
-|-------|------|-----------|-------------|
-| 1 | Infiltration | Find the keycard | Grunts |
-| 2 | Lockdown | Collect 3 data drives | Grunts, Soldiers |
-| 3 | Rescue Op | Free 4 prisoners | + Scouts |
-| 4 | Sabotage | Plant 3 explosives | + Brutes |
-| 5 | Showdown | Defeat the Commander | Boss fight (3 phases) |
-
-**5 Weapons**: Pistol, Shotgun, Machine Gun, Rocket Launcher, Plasma Rifle
-
-**5 Enemy Types**: Grunts, Soldiers, Scouts, Brutes, and a multi-phase Commander boss
-
-### Multiplayer Gun Game (1v1)
-
-Compete in real-time PvP arena combat over WebSocket:
-
-- Kill your opponent to advance through weapon tiers: **Pistol → Shotgun → Machine Gun → Sniper Rifle → Knife**
-- First player to score a **knife kill** wins
-- Server-authoritative hit validation prevents cheating
-- 2-second respawn timer, random spawn points
-
-## Getting Started
-
-### Single-Player (no setup required)
-
-Open `index.html` in any modern browser. That's it.
-
-### Multiplayer
-
-Start the WebSocket server:
-
-```bash
-cd server
-npm install
-npm start
-```
-
-The server runs on `ws://localhost:3000`. Then open `index.html` in your browser, select **Multiplayer**, and either host or join a game using a 4-letter room code.
+Then open `http://localhost:8000` in a modern browser.
 
 ## Controls
 
-| Key | Action |
-|-----|--------|
-| WASD | Move / Strafe |
-| Mouse | Look / Aim |
-| Left Click | Fire |
-| E | Interact (doors, objectives, pickups) |
-| 1-5 | Switch weapon |
+| Input | Action |
+|---|---|
+| WASD | Move and strafe |
+| Mouse | Aim / look |
+| Left click | Fire; click the title screen to start |
+| Enter or Space | Start the campaign / continue screens |
+| E | Interact with doors, pickups and objectives |
+| 1–7 | Switch weapon slots |
 | M | Toggle minimap |
 | Tab | Show objective hints |
-| ESC | Pause menu |
+| Escape | Pause / resume |
+| F | Toggle fullscreen where the browser/host allows it |
 
-## Tech Stack
+## Campaign
 
-- **Client**: Vanilla JavaScript (ES6 modules), HTML5 Canvas 2D
-- **Rendering**: Custom raycasting engine using the DDA (Digital Differential Analyzer) algorithm
-- **Server**: Node.js + `ws` (WebSocket) — the only external dependency
-- **Audio**: Procedurally generated via Web Audio API
-- **Textures**: Procedurally generated pixel art (brick, concrete, metal, tech panels, sprites)
+- Five missions with progressive objectives and enemy types.
+- Pistol, shotgun, machine gun, rocket launcher, plasma rifle, sniper rifle and knife weapon slots.
+- Grunts, soldiers, scouts, brutes and the multi-phase Commander boss.
+- Procedural pixel-art textures, weapon effects and enemy sounds.
+- Focus-loss handling pauses active gameplay and clears held inputs to prevent stuck movement or firing.
 
-## Project Structure
+## CrazyGames SDK
 
-```
-retro-fury/
-├── index.html              # Game entry point
-├── css/style.css           # Minimal fullscreen canvas styling
-├── src/
-│   ├── main.js             # Core game loop
-│   ├── engine/             # Raycasting renderer (camera, raycaster, sprites)
-│   ├── game/               # Player, weapons, enemies, projectiles, doors, items
-│   │   └── enemies/        # Grunt, Soldier, Scout, Brute, Commander
-│   ├── levels/             # 5 campaign levels + multiplayer arena
-│   ├── ai/                 # Enemy AI (state machine, pathfinding, behaviors)
-│   ├── ui/                 # HUD, menus, minimap, objectives, transitions
-│   ├── net/                # WebSocket client for multiplayer
-│   ├── audio/              # Procedural sound generation
-│   └── utils/              # Math, input handling, texture generation
-├── server/
-│   ├── index.js            # WebSocket server entry
-│   ├── room.js             # Room management (4-letter codes)
-│   ├── game-loop.js        # Server tick (20 Hz)
-│   └── protocol.js         # Message types
-└── pipeline/
-    └── dev-pipeline.dot    # Development workflow definition
-```
+The page loads the official CrazyGames HTML5 SDK v3 before the game modules. `src/platform/crazygames.js` handles SDK initialisation, loading start/stop, gameplay start/stop, a victory celebration, and one optional midgame ad at the natural break after mission 3. The game proceeds to the next mission if the ad cannot be shown.
 
-## How It Works
+SDK functionality is only active when the CrazyGames SDK is available. Local and other-host builds remain playable without it. Ad placements, permissions, preview testing and the final listing still need to be configured/checked in the CrazyGames Developer Portal; SDK integration cannot guarantee acceptance.
 
-The game renders a 3D perspective from a 2D tile map using **raycasting** — the same technique used by Wolfenstein 3D (1992). One ray is cast per screen column at 320x200 internal resolution, then scaled up to fill the browser window.
+## Project structure
 
-Enemies and items are rendered as **billboard sprites** that always face the player, depth-sorted and clipped against walls.
+- `index.html` — game entry, SDK include, and PixelForge intro.
+- `src/branding/boot-screen.js` — intro progress and transition.
+- `src/platform/crazygames.js` — SDK v3 lifecycle and midgame-ad adapter.
+- `src/main.js` — game loop and campaign state.
+- `src/engine/` — camera, raycasting renderer and sprites.
+- `src/game/` — player, weapons, enemies, projectiles, doors and pickups.
+- `src/levels/` — five campaign missions.
+- `src/ui/` — HUD, menus, minimap, objectives and transitions.
+- `src/audio/` — procedural sound effects and generated music.
+- `tests/` — browser test harness and gameplay/system test suites.
 
-The multiplayer server runs an authoritative game loop at 20 ticks/second, validating hit detection and managing game state. Clients interpolate remote player positions between server updates for smooth rendering.
+## Upstream and licensing note
 
-## License
+This repository descends from the Retro Fury browser FPS project at https://github.com/bencivjan/retro-fury. Its upstream README describes the project as MIT-licensed, but the upstream repository did not contain a separate `LICENSE` file when checked. The branding and generated music have been changed here; verify the upstream licence notice and all third-party rights before commercial release.
 
-MIT
+## Checks before submission
+
+- Run `tests/index.html` over a local HTTP server.
+- Test mouse lock, pause/resume, fullscreen, every mission objective and the final boss in a modern browser and the CrazyGames preview iframe.
+- Test the ad break in CrazyGames' SDK test environment and verify game audio is restored when an ad finishes or errors.
+- Review the Developer Portal's technical requirements, game content policy, and performance checks before submitting.
