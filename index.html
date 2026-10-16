@@ -2,12 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RETRO FURY</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="FuryFire is a retro first-person shooter by PixelForge Studios. Fight through five missions, master seven weapons, and take down the Commander.">
+    <title>FuryFire | PixelForge Studios</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 </head>
 <body>
-    <canvas id="game-canvas"></canvas>
+    <div id="pf-boot" role="status" aria-live="polite" aria-label="Loading FuryFire">
+        <div class="pf-boot-inner">
+            <svg class="pf-boot-logo" viewBox="0 0 500 330" role="img" aria-label="PixelForge Studios">
+                <rect width="500" height="330" rx="10" fill="#000"/>
+                <g transform="translate(95 22)"><path d="M8 112 35 8h125c29 0 43 24 32 48-4 9-14 16-27 20L68 112l-9 34-51 31 16-65Zm40-27 92-31c12-4 16-19 4-19H62Z" fill="#f7f9ff"/><path d="M102 111 242 59h95l-35 34H189l-7 25h104l-31 32H177l-10 34-51 31 23-104Z" fill="#0789ff"/></g>
+                <text x="250" y="252" text-anchor="middle" font-family="Arial,sans-serif" font-size="43" font-weight="900" fill="#f7f9ff">PIXEL<tspan fill="#0789ff">FORGE</tspan></text>
+                <path d="M48 279h57m290 0h57" stroke="#0789ff" stroke-width="4"/>
+                <text x="250" y="286" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="13" fill="#f7f9ff">STUDIOS</text>
+            </svg>
+            <div class="pf-boot-track"><div id="pf-boot-bar"></div></div>
+            <div class="pf-boot-caption" id="pf-boot-caption">Preparing FuryFire</div>
+        </div>
+    </div>
+    <canvas id="game-canvas" aria-label="FuryFire first-person shooter"></canvas>
+    <script type="module" src="src/branding/boot-screen.js"></script>
     <script type="module" src="src/main.js"></script>
 </body>
 </html>
