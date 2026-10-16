@@ -188,6 +188,19 @@ export class AudioManager {
     }
 
     /**
+     * Resume a suspended/interrupted context after a real user gesture.
+     * Needed by mobile browsers when audio is interrupted by app switching or calls.
+     */
+    async resume() {
+        if (!this._ctx || this._ctx.state === 'running') return;
+        try {
+            await this._ctx.resume();
+        } catch (error) {
+            console.warn('[AudioManager] Could not resume audio context:', error);
+        }
+    }
+
+    /**
      * Whether the audio system has been initialised.
      * @returns {boolean}
      */
