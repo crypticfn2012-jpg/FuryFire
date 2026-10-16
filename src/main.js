@@ -230,10 +230,12 @@ let isPlanting        = false;
 
 // -- Key tracking for edge detection --
 let prevKeysDown = new Set();
+let pausedAfterFocusLoss = false;
 
 // Losing focus must never leave inputs stuck or allow gameplay behind another tab.
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && gameState === GameState.PLAYING) {
+        pausedAfterFocusLoss = true;
         gameState = GameState.PAUSED;
         if (document.pointerLockElement && typeof document.exitPointerLock === 'function') {
             try { document.exitPointerLock(); } catch (_) { /* Ignore host restrictions. */ }
@@ -715,7 +717,11 @@ function updatePlaying(dt) {
     handleInteractions();
 
     // 5. Update weapon system.
+    const weaponBeforeInput = player.currentWeapon;
     const fireResult = weaponSystem.update(dt, input, player, enemies, map);
+    if (player.currentWeapon !== weaponBeforeInput) {
+        audio.play(player.currentWeapon === 6 ? 'knife_pullout' : 'weapon_cock', { volume: 0.72 });
+    }
 
     // 6. Handle weapon fire results.
     if (fireResult && fireResult.empty) {
@@ -906,6 +912,7 @@ function updatePlaying(dt) {
 
     // Pause on Escape.
     if (wasKeyJustPressed('Escape')) {
+        pausedAfterFocusLoss = false;
         gameState = GameState.PAUSED;
         // Exit pointer lock.
         if (document.pointerLockElement) {
@@ -1057,7 +1064,7 @@ function gameLoop(timestamp) {
     if (dt <= 0) dt = 0.016;
 
     // Ensure audio is initialized on first user interaction.
-    if (!audio.initialized && (input.isKeyDown('Enter') || input.isMouseDown() || input.isPointerLocked())) {
+    if (!audio.initialized && !audioInitStarted && (input.isKeyDown('Enter') || input.isMouseDown() || input.isPointerLocked())) {
         audioInitStarted = true;
         audio.init().catch((error) => console.warn('[FuryFire] Audio initialisation failed:', error));
     }
@@ -1109,7 +1116,9 @@ function gameLoop(timestamp) {
     }
 
     // Keep CrazyGames' lifecycle state in sync with actual gameplay, not menus or intermission screens.
-    syncCrazyGamesGameplay(gameState === GameState.PLAYING);
+    if (!(pausedAfterFocusLoss && gameState === GameState.PAUSED)) {
+        syncCrazyGamesGameplay(gameState === GameState.PLAYING);
+    }
 
     // Blit the off-screen buffer onto the display canvas.
     displayCtx.drawImage(buffer, 0, 0);
@@ -1129,10 +1138,13 @@ function updateLoading(dt) {
     bufferCtx.fillStyle = '#000000';
     bufferCtx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    bufferCtx.font = 'bold 12px "Courier New", Courier, monospace';
-    bufferCtx.fillStyle = '#FF6622';
+    bufferCtx.font = 'bold 14px "Courier New", Courier, monospace';
     bufferCtx.textAlign = 'center';
     bufferCtx.textBaseline = 'middle';
+    bufferCtx.lineWidth = 2;
+    bufferCtx.strokeStyle = '#4a1b0b';
+    bufferCtx.strokeText('LOADING...', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+    bufferCtx.fillStyle = '#ff854b';
     bufferCtx.fillText('LOADING...', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 
     // Textures are generated synchronously in the constructor, so we can
@@ -1194,6 +1206,7 @@ function updateLevelIntro(dt) {
 function updatePaused() {
     // Resume on Escape.
     if (wasKeyJustPressed('Escape')) {
+        pausedAfterFocusLoss = false;
         gameState = GameState.PLAYING;
         if (displayCanvas && !input.isPointerLocked()) {
             requestPointerLockSafe();
@@ -1203,6 +1216,7 @@ function updatePaused() {
 
     // Restart on R.
     if (wasKeyJustPressed('KeyR')) {
+        pausedAfterFocusLoss = false;
         restartLevel();
         prevPlayerHealth = player ? player.health : 100;
         gameState = GameState.PLAYING;
@@ -1214,6 +1228,7 @@ function updatePaused() {
 
     // Quit to title on Q.
     if (wasKeyJustPressed('KeyQ')) {
+        pausedAfterFocusLoss = false;
         gameState = GameState.TITLE;
         return;
     }
@@ -1256,15 +1271,16 @@ function updateLevelComplete(dt) {
     // One optional midgame ad at a genuine mission break, after mission 3.
     if (crazyGamesInitialized && currentLevelIndex === 2) {
         adBreakPending = true;
+        let adStarted = false;
         requestCrazyGamesMidgameAd({
-            onStarted: () => audio.mute(),
+            onStarted: () => { adStarted = true; audio.mute(); },
             onFinished: () => {
-                audio.unmute();
+                if (adStarted) audio.unmute();
                 adBreakPending = false;
                 continueAfterLevelComplete();
             },
             onError: () => {
-                audio.unmute();
+                if (adStarted) audio.unmute();
                 adBreakPending = false;
                 continueAfterLevelComplete();
             },
