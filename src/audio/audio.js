@@ -40,6 +40,7 @@ export class AudioManager {
 
         /** @type {boolean} */
         this._muted = false;
+        this._platformMuted = false;
 
         /** @type {boolean} */
         this._initialized = false;
@@ -153,7 +154,7 @@ export class AudioManager {
      */
     setMasterVolume(v) {
         this._masterVolume = Math.max(0, Math.min(1, v));
-        if (this._masterGain) this._masterGain.gain.value = this._muted ? 0 : this._masterVolume;
+        if (this._masterGain) this._masterGain.gain.value = (this._muted || this._platformMuted) ? 0 : this._masterVolume;
     }
 
     setSfxVolume(v) {
@@ -168,16 +169,22 @@ export class AudioManager {
 
     get volumes() { return { master: this._masterVolume, effects: this._sfxVolume, music: this._musicVolume }; }
 
-    /** Mute all audio output. */
+    /** Mute audio for an in-game break such as an ad. */
     mute() {
         this._muted = true;
         if (this._masterGain) this._masterGain.gain.value = 0;
     }
 
-    /** Unmute audio output, restoring the previous master volume. */
+    /** Unmute after an in-game break, respecting the platform's mute setting. */
     unmute() {
         this._muted = false;
-        if (this._masterGain) this._masterGain.gain.value = this._masterVolume;
+        if (this._masterGain) this._masterGain.gain.value = this._platformMuted ? 0 : this._masterVolume;
+    }
+
+    /** CrazyGames platform mute takes priority over the in-game volume controls. */
+    setPlatformMuted(muted) {
+        this._platformMuted = Boolean(muted);
+        if (this._masterGain) this._masterGain.gain.value = (this._muted || this._platformMuted) ? 0 : this._masterVolume;
     }
 
     /**
