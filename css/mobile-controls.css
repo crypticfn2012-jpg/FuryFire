@@ -1,0 +1,199 @@
+/* Touch-first overlay for FuryFire's fixed 320x200 retro viewport. */
+#ff-mobile-controls {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 8500;
+    overflow: hidden;
+    color: #f7f9ff;
+    font-family: "Courier New", Courier, monospace;
+    pointer-events: none;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+#ff-mobile-controls.ff-mobile-device { display: block; }
+#ff-mobile-controls button {
+    appearance: none;
+    border: 1px solid rgba(7, 137, 255, .78);
+    border-radius: 9px;
+    background: rgba(4, 11, 24, .76);
+    color: #f7f9ff;
+    font: 800 12px/1 "Courier New", Courier, monospace;
+    letter-spacing: .02em;
+    min-width: 46px;
+    min-height: 46px;
+    padding: 8px;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    box-shadow: 0 2px 12px rgba(0,0,0,.25);
+    backdrop-filter: blur(3px);
+}
+#ff-mobile-controls button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+#ff-mobile-controls button.is-pressed,
+#ff-mobile-controls button:active {
+    background: rgba(7, 137, 255, .9);
+    border-color: #b9e2ff;
+    transform: scale(.96);
+}
+#ff-mobile-controls .ff-look-zone {
+    display: none;
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 58%;
+    pointer-events: auto;
+    touch-action: none;
+    background: transparent;
+}
+#ff-mobile-controls.is-playing .ff-look-zone { display: block; }
+#ff-mobile-controls .ff-stick {
+    display: none;
+    position: absolute;
+    z-index: 4;
+    left: calc(12px + env(safe-area-inset-left, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: clamp(100px, 20vmin, 138px);
+    height: clamp(100px, 20vmin, 138px);
+    border: 1px solid rgba(205, 226, 255, .48);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(9, 30, 56, .55), rgba(0, 0, 0, .25));
+    box-shadow: inset 0 0 0 10px rgba(7, 137, 255, .06);
+    pointer-events: auto;
+    touch-action: none;
+}
+#ff-mobile-controls.is-playing .ff-stick { display: block; }
+#ff-mobile-controls .ff-stick::before {
+    content: "MOVE";
+    position: absolute;
+    left: 0; right: 0; bottom: 7px;
+    text-align: center;
+    color: rgba(235, 244, 255, .7);
+    font-size: 9px;
+    font-weight: 700;
+    pointer-events: none;
+}
+#ff-mobile-controls .ff-stick-knob {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 43%; height: 43%;
+    border: 1px solid rgba(220, 238, 255, .88);
+    border-radius: 50%;
+    background: rgba(7, 137, 255, .5);
+    box-shadow: 0 1px 8px rgba(0,0,0,.4);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+#ff-mobile-controls .ff-mobile-actions {
+    display: none;
+    position: absolute;
+    z-index: 5;
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    align-items: flex-end;
+    gap: 8px;
+    pointer-events: none;
+}
+#ff-mobile-controls.is-playing .ff-mobile-actions { display: flex; }
+#ff-mobile-controls .ff-mobile-actions button { pointer-events: auto; }
+#ff-mobile-controls .ff-weapon-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5px;
+}
+#ff-mobile-controls .ff-weapon-row button {
+    min-width: 44px;
+    min-height: 42px;
+    font-size: 10px;
+    padding: 5px;
+}
+#ff-mobile-controls .ff-action-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 7px;
+}
+#ff-mobile-controls .ff-use {
+    width: clamp(54px, 11vmin, 64px);
+    height: clamp(54px, 11vmin, 64px);
+}
+#ff-mobile-controls .ff-fire {
+    width: clamp(66px, 14vmin, 82px);
+    height: clamp(66px, 14vmin, 82px);
+    border-radius: 50%;
+    border-color: #ff9b5f;
+    background: rgba(112, 40, 15, .78);
+    font-size: 13px;
+}
+#ff-mobile-controls .ff-pause {
+    position: absolute;
+    z-index: 6;
+    top: calc(10px + env(safe-area-inset-top, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 11px;
+    display: none;
+}
+#ff-mobile-controls.is-playing .ff-pause { display: block; }
+#ff-mobile-controls .ff-resume {
+    display: none;
+    position: absolute;
+    z-index: 10;
+    left: 50%; top: 50%;
+    min-width: 110px;
+    min-height: 54px;
+    transform: translate(-50%, -50%);
+    background: rgba(5, 22, 42, .95);
+    font-size: 13px;
+}
+#ff-mobile-controls.is-paused .ff-resume { display: block; }
+#ff-mobile-controls.is-paused .ff-stick,
+#ff-mobile-controls.is-paused .ff-mobile-actions,
+#ff-mobile-controls.is-paused .ff-look-zone,
+#ff-mobile-controls.is-paused .ff-pause { display: none; }
+#ff-mobile-controls .ff-rotate-prompt {
+    display: none;
+    position: absolute;
+    z-index: 20;
+    inset: 0;
+    padding: 24px;
+    padding-top: calc(24px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    background: rgba(0, 0, 0, .96);
+    place-items: center;
+    text-align: center;
+    pointer-events: auto;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.6;
+}
+#ff-mobile-controls .ff-rotate-icon {
+    display: block;
+    margin: 0 auto 14px;
+    font-size: 36px;
+    color: #0789ff;
+}
+#ff-mobile-controls.is-portrait:not(.is-settings) .ff-rotate-prompt { display: grid; }
+#ff-mobile-controls.is-portrait:not(.is-settings) .ff-stick,
+#ff-mobile-controls.is-portrait:not(.is-settings) .ff-mobile-actions,
+#ff-mobile-controls.is-portrait:not(.is-settings) .ff-look-zone,
+#ff-mobile-controls.is-portrait:not(.is-settings) .ff-pause,
+#ff-mobile-controls.is-portrait:not(.is-settings) .ff-resume { display: none; }
+
+@media (max-width: 680px) and (orientation: landscape) {
+    #ff-mobile-controls .ff-mobile-actions { gap: 5px; }
+    #ff-mobile-controls .ff-weapon-row { gap: 4px; }
+    #ff-mobile-controls button { border-radius: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #ff-mobile-controls button { transition: none; }
+}
