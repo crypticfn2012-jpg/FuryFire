@@ -1085,6 +1085,20 @@ let lastTimestamp = 0;
 let audioInitStarted = false;
 let adBreakPending = false;
 
+// Prime Web Audio directly from a user gesture. Starting it from the animation
+// loop can be rejected by iOS/Safari autoplay policy, especially on touch devices.
+function primeOrResumeAudioFromGesture() {
+    if (!audioInitStarted) {
+        audioInitStarted = true;
+        audio.init().catch((error) => console.warn('[FuryFire] Audio initialisation failed:', error));
+    } else if (audio.initialized) {
+        audio.resume();
+    }
+}
+window.addEventListener('pointerdown', primeOrResumeAudioFromGesture, { capture: true, passive: true });
+window.addEventListener('keydown', primeOrResumeAudioFromGesture, { capture: true });
+document.addEventListener('touchend', primeOrResumeAudioFromGesture, { passive: true });
+
 function gameLoop(timestamp) {
     // Calculate delta time in seconds, capped at 1/30 to prevent physics glitches.
     let dt = (timestamp - lastTimestamp) / 1000;
