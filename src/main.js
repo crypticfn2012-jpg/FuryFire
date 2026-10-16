@@ -168,6 +168,7 @@ const textures       = textureManager.getAllAsObject();
 
 // Audio manager - initialized lazily on first user interaction.
 const audio = new AudioManager();
+window.addEventListener('furyfire:platform-mute', (event) => audio.setPlatformMuted(event.detail?.muted));
 window.addEventListener('furyfire:settings-changed', (event) => {
     const v = event.detail || {};
     if (Number.isFinite(v.master)) audio.setMasterVolume(v.master);
