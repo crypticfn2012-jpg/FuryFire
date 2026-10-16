@@ -7,9 +7,18 @@
 html, body {
     width: 100%;
     height: 100%;
+    min-height: 100%;
     overflow: hidden;
     background: #000;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+body {
+    position: fixed;
+    inset: 0;
 }
 
 #game-canvas {
@@ -20,10 +29,78 @@ html, body {
     transform: translate(-50%, -50%);
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    cursor: crosshair;
+    touch-action: none;
+    outline: none;
+}
+
+body.pointer-locked #game-canvas {
     cursor: none;
 }
 
-/* Show default cursor when pointer lock is not active */
-body:not(.pointer-locked) #game-canvas {
-    cursor: crosshair;
+#pf-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: #000;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 420ms ease, visibility 420ms ease;
+}
+
+#pf-boot.done {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.pf-boot-inner {
+    width: min(390px, 88vw);
+    text-align: center;
+}
+
+.pf-boot-logo {
+    display: block;
+    width: min(330px, 78vw);
+    max-height: 56vh;
+    margin: 0 auto 28px;
+}
+
+.pf-boot-track {
+    height: 5px;
+    width: 100%;
+    border-radius: 8px;
+    background: #172238;
+    overflow: hidden;
+}
+
+#pf-boot-bar {
+    height: 100%;
+    width: 4%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #0789ff, #16b7ff);
+    transition: width 180ms ease;
+}
+
+.pf-boot-caption {
+    margin-top: 12px;
+    color: #91a2bf;
+    font: 800 10px/1.4 system-ui, sans-serif;
+    letter-spacing: .17em;
+    text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #pf-boot,
+    #pf-boot-bar {
+        transition-duration: 0ms;
+    }
+}
+
+@media (max-height: 430px) {
+    .pf-boot-inner { width: min(280px, 70vw); }
+    .pf-boot-logo { width: min(220px, 54vw); max-height: 45vh; margin-bottom: 16px; }
 }
