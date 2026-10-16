@@ -110,7 +110,7 @@ export class MenuSystem {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         ctx.fillText('WASD - MOVE  |  MOUSE - AIM  |  CLICK - FIRE  |  E - INTERACT', cx, controlsY);
-        ctx.fillText(uiText('1-7 - WEAPONS  |  M - MAP  |  TAB - OBJECTIVES  |  ESC - PAUSE'), cx, controlsY + 12);
+        ctx.fillText(uiText('1-7 - WEAPONS  |  M - MAP  |  TAB - OBJECTIVES  |  ESC - SETTINGS'), cx, controlsY + 12);
 
         // -- Blinking prompt --
         if (this._isBlinkOn()) {
