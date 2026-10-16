@@ -86,6 +86,17 @@ class InputManager {
     }
 
     /**
+     * Clear held inputs after focus loss so movement and firing cannot stick.
+     */
+    clear() {
+        this._keysDown.clear();
+        this._mouseDown = false;
+        this._mousePressed = false;
+        this._mouseDeltaX = 0;
+        this._mouseDeltaY = 0;
+    }
+
+    /**
      * Remove all event listeners. Call on teardown / cleanup.
      */
     destroy() {
@@ -205,8 +216,11 @@ class InputManager {
     }
 
     _onCanvasClick() {
-        if (!this._pointerLocked && this._canvas) {
-            this._canvas.requestPointerLock();
+        if (!this._pointerLocked && this._canvas && typeof this._canvas.requestPointerLock === 'function') {
+            try {
+                const result = this._canvas.requestPointerLock();
+                if (result && typeof result.catch === 'function') result.catch(() => {});
+            } catch (_) { /* Pointer lock may be unavailable in a platform iframe. */ }
         }
     }
 }
