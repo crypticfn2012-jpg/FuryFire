@@ -1,5 +1,5 @@
 // =============================================================================
-// menu.js - All Menu Screens for RETRO FURY
+// menu.js - All Menu Screens for FURYFIRE
 // =============================================================================
 // Manages the title screen, pause overlay, death screen, and victory screen.
 // All screens use heavy retro styling: scanlines, CRT vignette, monospace
@@ -75,12 +75,12 @@ export class MenuSystem {
 
         // -- Subtle background glow --
         const glow = ctx.createRadialGradient(cx, cy - 20, 10, cx, cy - 20, this.screenWidth * 0.5);
-        glow.addColorStop(0, 'rgba(255, 40, 0, 0.08)');
+        glow.addColorStop(0, 'rgba(7, 137, 255, 0.12)');
         glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = glow;
         ctx.fillRect(0, 0, this.screenWidth, this.screenHeight);
 
-        // -- Title: "RETRO FURY" --
+        // -- Title: "FURYFIRE" --
         this._drawRetroTitle(ctx, cx, cy - 30);
 
         // -- Subtitle tagline --
@@ -88,7 +88,7 @@ export class MenuSystem {
         ctx.fillStyle = '#888888';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('A RETRO FIRST-PERSON SHOOTER', cx, cy - 5);
+        ctx.fillText('PIXELFORGE STUDIOS PRESENTS', cx, cy - 5);
 
         // -- Single-player label --
         const modeY = cy + 12;
@@ -96,7 +96,7 @@ export class MenuSystem {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
-        ctx.fillStyle = '#FFCC00';
+        ctx.fillStyle = '#0789ff';
         ctx.fillText('> START <', cx, modeY);
 
         // -- Controls list --
@@ -111,10 +111,10 @@ export class MenuSystem {
         // -- Blinking prompt --
         if (this._isBlinkOn()) {
             ctx.font = `bold 9px ${FONT_FAMILY}`;
-            ctx.fillStyle = '#FF6622';
+            ctx.fillStyle = '#16b7ff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText('PRESS ENTER', cx, controlsY + 30);
+            ctx.fillText('CLICK OR PRESS ENTER', cx, controlsY + 30);
         }
 
         // -- Scanlines and CRT effects --
@@ -345,7 +345,7 @@ export class MenuSystem {
     // -------------------------------------------------------------------------
 
     /**
-     * Draw the "RETRO FURY" title in large, stylized retro text.
+     * Draw the "FURYFIRE" title in large, stylized retro text.
      * Uses multiple layered draws for a glowing neon effect.
      *
      * @param {CanvasRenderingContext2D} ctx
@@ -354,24 +354,24 @@ export class MenuSystem {
      * @private
      */
     _drawRetroTitle(ctx, cx, cy) {
-        const title = 'RETRO FURY';
+        const title = 'FURYFIRE';
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         // Outer glow layer.
         ctx.font = `bold 32px ${FONT_FAMILY}`;
-        ctx.fillStyle = 'rgba(255, 60, 0, 0.15)';
+        ctx.fillStyle = 'rgba(7, 137, 255, 0.18)';
         ctx.fillText(title, cx, cy);
 
         // Drop shadow.
-        ctx.fillStyle = '#440000';
+        ctx.fillStyle = '#061a35';
         ctx.fillText(title, cx + 3, cy + 3);
 
         // Main text - bright red/orange gradient simulation.
-        ctx.fillStyle = '#FF4400';
+        ctx.fillStyle = '#0789ff';
         ctx.fillText(title, cx + 1, cy + 1);
-        ctx.fillStyle = '#FF6622';
+        ctx.fillStyle = '#16b7ff';
         ctx.fillText(title, cx, cy);
 
         // Highlight pass (top edge catch-light effect).
@@ -379,14 +379,14 @@ export class MenuSystem {
         ctx.beginPath();
         ctx.rect(0, cy - 18, this.screenWidth, 10);
         ctx.clip();
-        ctx.fillStyle = '#FFAA44';
+        ctx.fillStyle = '#b9e6ff';
         ctx.fillText(title, cx, cy);
         ctx.restore();
 
         // Thin underline accent.
         const textMetrics = ctx.measureText(title);
         const textW = textMetrics.width;
-        ctx.strokeStyle = '#FF4400';
+        ctx.strokeStyle = '#0789ff';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(cx - textW / 2, cy + 18);
@@ -394,7 +394,7 @@ export class MenuSystem {
         ctx.stroke();
 
         // Decorative dots at line ends.
-        ctx.fillStyle = '#FF6622';
+        ctx.fillStyle = '#16b7ff';
         ctx.beginPath();
         ctx.arc(cx - textW / 2, cy + 18, 3, 0, Math.PI * 2);
         ctx.fill();
