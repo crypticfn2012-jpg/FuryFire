@@ -11,6 +11,7 @@
 // -----------------------------------------------------------------------------
 
 const FONT_FAMILY = '"Courier New", Courier, monospace';
+const uiText = (value) => typeof window.FuryFireTranslate === 'function' ? window.FuryFireTranslate(value) : value;
 
 /** Blink interval for "PRESS ENTER" prompts (seconds per full cycle). */
 const BLINK_INTERVAL = 1.0;
@@ -39,6 +40,7 @@ export class MenuSystem {
 
         /** @type {number} Elapsed time accumulator for animations. */
         this._elapsed = 0;
+        this._scanlinesEnabled = true;
 
         /** @type {number} Elapsed time accumulator (kept for API compat). */
         this._titleReady = false;
@@ -57,6 +59,8 @@ export class MenuSystem {
     update(dt) {
         this._elapsed += dt;
     }
+
+    setScanlinesEnabled(enabled) { this._scanlinesEnabled = Boolean(enabled); }
 
     /**
      * Render the title screen.
@@ -88,7 +92,7 @@ export class MenuSystem {
         ctx.fillStyle = '#b5becb';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('PIXELFORGE STUDIOS PRESENTS', cx, cy - 5);
+        ctx.fillText(uiText('PIXELFORGE STUDIOS PRESENTS'), cx, cy - 5);
 
         // -- Single-player label --
         const modeY = cy + 12;
@@ -97,7 +101,7 @@ export class MenuSystem {
         ctx.textBaseline = 'top';
 
         ctx.fillStyle = '#0789ff';
-        ctx.fillText('> START <', cx, modeY);
+        ctx.fillText(uiText('> START <'), cx, modeY);
 
         // -- Controls list --
         const controlsY = cy + 55;
@@ -106,7 +110,7 @@ export class MenuSystem {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         ctx.fillText('WASD - MOVE  |  MOUSE - AIM  |  CLICK - FIRE  |  E - INTERACT', cx, controlsY);
-        ctx.fillText('1-7 - WEAPONS  |  M - MAP  |  TAB - OBJECTIVES  |  ESC - PAUSE', cx, controlsY + 12);
+        ctx.fillText(uiText('1-7 - WEAPONS  |  M - MAP  |  TAB - OBJECTIVES  |  ESC - PAUSE'), cx, controlsY + 12);
 
         // -- Blinking prompt --
         if (this._isBlinkOn()) {
@@ -114,7 +118,7 @@ export class MenuSystem {
             ctx.fillStyle = '#16b7ff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText('CLICK OR PRESS ENTER', cx, controlsY + 30);
+            ctx.fillText(uiText('CLICK OR PRESS ENTER'), cx, controlsY + 30);
         }
 
         // -- Scanlines and CRT effects --
@@ -155,9 +159,9 @@ export class MenuSystem {
         ctx.font = `bold 8px ${FONT_FAMILY}`;
         ctx.fillStyle = '#AAAAAA';
         ctx.textBaseline = 'top';
-        ctx.fillText('ESC - RESUME', cx, cy + 15);
-        ctx.fillText('R - RESTART LEVEL', cx, cy + 30);
-        ctx.fillText('Q - QUIT TO TITLE', cx, cy + 45);
+        ctx.fillText(uiText('ESC - RESUME'), cx, cy + 15);
+        ctx.fillText(uiText('R - RESTART LEVEL'), cx, cy + 30);
+        ctx.fillText(uiText('Q - QUIT TO TITLE'), cx, cy + 45);
 
         // -- Scanlines --
         this._renderScanlines(ctx);
@@ -400,6 +404,7 @@ export class MenuSystem {
      * @private
      */
     _renderScanlines(ctx) {
+        if (!this._scanlinesEnabled) return;
         ctx.fillStyle = `rgba(0, 0, 0, ${SCANLINE_ALPHA})`;
         for (let y = 0; y < this.screenHeight; y += SCANLINE_GAP) {
             ctx.fillRect(0, y, this.screenWidth, 1);
