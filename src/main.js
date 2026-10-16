@@ -1062,7 +1062,7 @@ function gameLoop(timestamp) {
     // Ensure audio is initialized on first user interaction.
     if (!audio.initialized && !audioInitStarted && (input.isKeyDown('Enter') || input.isMouseDown() || input.isPointerLocked())) {
         audioInitStarted = true;
-        audio.init().catch((error) => { audioInitStarted = false; console.warn('[FuryFire] Audio initialisation failed:', error); });
+        audio.init().catch((error) => console.warn('[FuryFire] Audio initialisation failed:', error));
     }
 
     // Background music: play during gameplay, stop otherwise.
