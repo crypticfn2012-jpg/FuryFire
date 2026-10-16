@@ -117,11 +117,11 @@ const level2 = {
     // Player starts in the south elevator arrival area, facing north.
     playerStart: { x: 19.5, y: 36.5, angle: -Math.PI / 2 },
 
-    // 14 enemies: Grunts and Soldiers. The opening is deliberately staged:
-    // the first grunt is behind the closed connector door, giving the player
-    // time to orient and engage instead of taking damage immediately on entry.
+    // 14 enemies: Grunts and Soldiers. The first encounter is placed well
+    // up the narrow entry corridor, outside the initial sight range so the
+    // player can orient before being engaged.
     enemies: [
-        // First contact: visible only after opening the connector door.
+        // First contact: approach from the start corridor; the enemy cannot see the player immediately.
         { type: 'grunt',   x: 19.5, y: 27.5 },
         // Hub area - one grunt and one soldier introduce the stronger enemy gradually.
         { type: 'grunt',   x: 17.5, y: 20.5 },
