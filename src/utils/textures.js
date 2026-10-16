@@ -1057,7 +1057,7 @@ function generateShotgunHUD() {
             setPixel(img, ox + 66, vy + recoil, 28, 29, 32);
         }
         strokeRect(img, ox + 49, 59 + recoil, 30, 12, 38, 38, 38);
-        for (let gx = 52; gx < 76; gx += 4) vLine(img, gx, 66 + recoil, 69 + recoil, 142, 117, 78);
+        for (let gx = 52; gx < 76; gx += 4) vLine(img, ox + gx, 66 + recoil, 69 + recoil, 142, 117, 78);
         hLine(img, ox + 53, ox + 75, 82 + recoil, 153, 105, 57);
         fillRect(img, ox + 66, 72 + recoil, 3, 2, 26, 28, 30);
         if (f === 1) {
@@ -1273,7 +1273,7 @@ function generateSniperRifleHUD() {
         fillRect(img, ox + 70, 39 + recoil, 4, 5, 60, 64, 67);
         fillRect(img, ox + 50, 62 + recoil, 8, 3, 120, 122, 123);
         fillRect(img, ox + 76, 62 + recoil, 4, 8, 47, 50, 52);
-        for (let gx = 52; gx < 76; gx += 4) vLine(img, gx, 83 + recoil, 88 + recoil, 80, 58, 36);
+        for (let gx = 52; gx < 76; gx += 4) vLine(img, ox + gx, 83 + recoil, 88 + recoil, 80, 58, 36);
         if (f === 1) {
             // Bright sharp flash
             fillCircle(img, ox + 64, 10, 10, 255, 255, 180);
