@@ -87,6 +87,7 @@ const GameState = Object.freeze({
     DEATH:          5,
     LEVEL_COMPLETE: 6,
     VICTORY:        7,
+    SETTINGS:      8,
 });
 
 // =============================================================================
@@ -167,6 +168,17 @@ const textures       = textureManager.getAllAsObject();
 
 // Audio manager - initialized lazily on first user interaction.
 const audio = new AudioManager();
+window.addEventListener('furyfire:settings-changed', (event) => {
+    const v = event.detail || {};
+    if (Number.isFinite(v.master)) audio.setMasterVolume(v.master);
+    if (Number.isFinite(v.effects)) audio.setSfxVolume(v.effects);
+    if (Number.isFinite(v.music)) audio.setMusicVolume(v.music);
+});
+window.addEventListener('furyfire:test-reload', async () => {
+    if (!audio.initialized) await audio.init();
+    audio.play('weapon_reload', { volume: 0.8 });
+});
+window.addEventListener('furyfire:visual-settings', (event) => menuSystem.setScanlinesEnabled(event.detail?.scanlines !== false));
 
 // Engine subsystems.
 const camera         = new Camera(0, 0, 1, 0);
@@ -192,6 +204,20 @@ const weaponSystem = new WeaponSystem();
 // =============================================================================
 
 let gameState = GameState.LOADING;
+let settingsReturnState = GameState.TITLE;
+function openSettings(returnState = gameState) {
+    if (gameState === GameState.SETTINGS) return;
+    settingsReturnState = returnState; gameState = GameState.SETTINGS;
+    input.clear(); prevKeysDown.clear();
+    if (document.pointerLockElement && typeof document.exitPointerLock === 'function') { try { document.exitPointerLock(); } catch (_) {} }
+    window.dispatchEvent(new Event('furyfire:settings-opened'));
+}
+window.addEventListener('furyfire:open-settings', () => openSettings(gameState === GameState.PLAYING ? GameState.PAUSED : gameState));
+window.addEventListener('furyfire:close-settings', () => {
+    if (gameState !== GameState.SETTINGS) return;
+    gameState = settingsReturnState; input.clear(); prevKeysDown.clear();
+    if (gameState === GameState.PLAYING && displayCanvas) requestPointerLockSafe();
+});
 
 // -- Level data (populated on level load) --
 let currentLevelIndex = 0;
@@ -910,15 +936,12 @@ function updatePlaying(dt) {
         minimap.toggle();
     }
 
-    // Pause on Escape.
+    // ESC opens the full settings page; closing returns to the pause screen.
     if (wasKeyJustPressed('Escape')) {
         pausedAfterFocusLoss = false;
-        gameState = GameState.PAUSED;
-        // Exit pointer lock.
-        if (document.pointerLockElement) {
-            document.exitPointerLock();
-        }
+        openSettings(GameState.PAUSED);
     }
+    if (wasKeyJustPressed('KeyR')) audio.play('weapon_reload', { volume: 0.72 });
 }
 
 // =============================================================================
@@ -1100,9 +1123,13 @@ function gameLoop(timestamp) {
             renderPlaying(dt);
             break;
         case GameState.PAUSED:
-            renderPlaying(dt);
+            if (player) renderPlaying(dt);
             menuSystem.renderPause(bufferCtx);
             updatePaused();
+            break;
+        case GameState.SETTINGS:
+            if (player) renderPlaying(dt);
+            else menuSystem.renderTitle(bufferCtx);
             break;
         case GameState.DEATH:
             updateDeath(dt);
@@ -1115,6 +1142,7 @@ function gameLoop(timestamp) {
             break;
     }
 
+    window.dispatchEvent(new CustomEvent('furyfire:state', { detail: { state: gameState } }));
     // Keep CrazyGames' lifecycle state in sync with actual gameplay, not menus or intermission screens.
     if (!(pausedAfterFocusLoss && gameState === GameState.PAUSED)) {
         syncCrazyGamesGameplay(gameState === GameState.PLAYING);
