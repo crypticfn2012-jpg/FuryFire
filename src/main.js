@@ -87,6 +87,7 @@ const GameState = Object.freeze({
     DEATH:          5,
     LEVEL_COMPLETE: 6,
     VICTORY:        7,
+    SETTINGS:      8,
 });
 
 // =============================================================================
@@ -104,16 +105,18 @@ const bufferCtx = buffer.getContext('2d');
 
 function resize() {
     const targetAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
-    const windowW = window.innerWidth;
-    const windowH = window.innerHeight;
+    // visualViewport tracks the visible area when mobile browser bars expand/collapse.
+    const viewport = window.visualViewport;
+    const windowW = Math.max(1, viewport ? viewport.width : window.innerWidth);
+    const windowH = Math.max(1, viewport ? viewport.height : window.innerHeight);
     const windowAspect = windowW / windowH;
 
     let width, height;
     if (windowAspect > targetAspect) {
-        height = windowH;
+        height = Math.floor(windowH);
         width  = Math.floor(height * targetAspect);
     } else {
-        width  = windowW;
+        width  = Math.floor(windowW);
         height = Math.floor(width / targetAspect);
     }
 
@@ -125,7 +128,9 @@ function resize() {
     displayCtx.imageSmoothingEnabled = false;
 }
 
-window.addEventListener('resize', resize);
+window.addEventListener('resize', resize, { passive: true });
+window.addEventListener('orientationchange', () => window.setTimeout(resize, 80), { passive: true });
+window.visualViewport?.addEventListener('resize', resize, { passive: true });
 resize();
 
 function requestPointerLockSafe() {
@@ -167,6 +172,18 @@ const textures       = textureManager.getAllAsObject();
 
 // Audio manager - initialized lazily on first user interaction.
 const audio = new AudioManager();
+window.addEventListener('furyfire:platform-mute', (event) => audio.setPlatformMuted(event.detail?.muted));
+window.addEventListener('furyfire:settings-changed', (event) => {
+    const v = event.detail || {};
+    if (Number.isFinite(v.master)) audio.setMasterVolume(v.master);
+    if (Number.isFinite(v.effects)) audio.setSfxVolume(v.effects);
+    if (Number.isFinite(v.music)) audio.setMusicVolume(v.music);
+});
+window.addEventListener('furyfire:test-reload', async () => {
+    if (!audio.initialized) await audio.init();
+    audio.play('weapon_reload', { volume: 0.8 });
+});
+window.addEventListener('furyfire:visual-settings', (event) => menuSystem.setScanlinesEnabled(event.detail?.scanlines !== false));
 
 // Engine subsystems.
 const camera         = new Camera(0, 0, 1, 0);
@@ -178,6 +195,7 @@ const spriteRenderer = new SpriteRenderer(512);
 const hud             = new HUD(SCREEN_WIDTH, SCREEN_HEIGHT);
 const minimap         = new Minimap(SCREEN_WIDTH, SCREEN_HEIGHT);
 const menuSystem      = new MenuSystem(SCREEN_WIDTH, SCREEN_HEIGHT);
+try { menuSystem.setScanlinesEnabled(localStorage.getItem('furyfire.scanlines') !== 'false'); } catch (_) { /* Storage can be disabled. */ }
 const objectiveSystem = new ObjectiveSystem();
 const transitionSystem = new TransitionSystem(SCREEN_WIDTH, SCREEN_HEIGHT);
 
@@ -192,12 +210,42 @@ const weaponSystem = new WeaponSystem();
 // =============================================================================
 
 let gameState = GameState.LOADING;
+let settingsReturnState = GameState.TITLE;
+function openSettings(returnState = gameState) {
+    if (gameState === GameState.SETTINGS) return;
+    settingsReturnState = returnState; gameState = GameState.SETTINGS;
+    input.clear(); prevKeysDown.clear();
+    if (document.pointerLockElement && typeof document.exitPointerLock === 'function') { try { document.exitPointerLock(); } catch (_) {} }
+    window.dispatchEvent(new Event('furyfire:settings-opened'));
+}
+window.addEventListener('furyfire:open-settings', () => openSettings(gameState === GameState.PLAYING ? GameState.PAUSED : gameState));
+window.addEventListener('furyfire:close-settings', () => {
+    if (gameState !== GameState.SETTINGS) return;
+    gameState = settingsReturnState; input.clear(); prevKeysDown.clear();
+    if (gameState === GameState.PLAYING && displayCanvas) requestPointerLockSafe();
+});
 
 // -- Level data (populated on level load) --
 let currentLevelIndex = 0;
 let levelData  = null;   // Parsed level data from loader.
 let map        = null;   // { grid, width, height }
 let player     = null;
+
+// The mobile weapon buttons cycle through the weapons actually unlocked.
+// Desktop number-key selection remains unchanged.
+window.addEventListener('furyfire:cycle-weapon', (event) => {
+    if (gameState !== GameState.PLAYING || !player) return;
+    const direction = Number(event.detail?.direction) < 0 ? -1 : 1;
+    const count = player.weapons.length;
+    for (let step = 1; step <= count; step++) {
+        const index = (player.currentWeapon + direction * step + count) % count;
+        if (!player.weapons[index]) continue;
+        if (weaponSystem.switchWeapon(index, player)) {
+            audio.play(index === 6 ? 'knife_pullout' : 'weapon_cock', { volume: 0.72 });
+        }
+        break;
+    }
+});
 let doors      = [];
 let enemies    = [];
 let items      = [];
@@ -230,10 +278,12 @@ let isPlanting        = false;
 
 // -- Key tracking for edge detection --
 let prevKeysDown = new Set();
+let pausedAfterFocusLoss = false;
 
 // Losing focus must never leave inputs stuck or allow gameplay behind another tab.
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && gameState === GameState.PLAYING) {
+        pausedAfterFocusLoss = true;
         gameState = GameState.PAUSED;
         if (document.pointerLockElement && typeof document.exitPointerLock === 'function') {
             try { document.exitPointerLock(); } catch (_) { /* Ignore host restrictions. */ }
@@ -715,7 +765,11 @@ function updatePlaying(dt) {
     handleInteractions();
 
     // 5. Update weapon system.
+    const weaponBeforeInput = player.currentWeapon;
     const fireResult = weaponSystem.update(dt, input, player, enemies, map);
+    if (player.currentWeapon !== weaponBeforeInput) {
+        audio.play(player.currentWeapon === 6 ? 'knife_pullout' : 'weapon_cock', { volume: 0.72 });
+    }
 
     // 6. Handle weapon fire results.
     if (fireResult && fireResult.empty) {
@@ -904,14 +958,12 @@ function updatePlaying(dt) {
         minimap.toggle();
     }
 
-    // Pause on Escape.
+    // ESC opens the full settings page; closing returns to the pause screen.
     if (wasKeyJustPressed('Escape')) {
-        gameState = GameState.PAUSED;
-        // Exit pointer lock.
-        if (document.pointerLockElement) {
-            document.exitPointerLock();
-        }
+        pausedAfterFocusLoss = false;
+        openSettings(GameState.PAUSED);
     }
+    if (wasKeyJustPressed('KeyR')) audio.play('weapon_reload', { volume: 0.72 });
 }
 
 // =============================================================================
@@ -1049,6 +1101,20 @@ let lastTimestamp = 0;
 let audioInitStarted = false;
 let adBreakPending = false;
 
+// Prime Web Audio directly from a user gesture. Starting it from the animation
+// loop can be rejected by iOS/Safari autoplay policy, especially on touch devices.
+function primeOrResumeAudioFromGesture() {
+    if (!audioInitStarted) {
+        audioInitStarted = true;
+        audio.init().catch((error) => console.warn('[FuryFire] Audio initialisation failed:', error));
+    } else if (audio.initialized) {
+        audio.resume();
+    }
+}
+window.addEventListener('pointerdown', primeOrResumeAudioFromGesture, { capture: true, passive: true });
+window.addEventListener('keydown', primeOrResumeAudioFromGesture, { capture: true });
+document.addEventListener('touchend', primeOrResumeAudioFromGesture, { passive: true });
+
 function gameLoop(timestamp) {
     // Calculate delta time in seconds, capped at 1/30 to prevent physics glitches.
     let dt = (timestamp - lastTimestamp) / 1000;
@@ -1057,7 +1123,7 @@ function gameLoop(timestamp) {
     if (dt <= 0) dt = 0.016;
 
     // Ensure audio is initialized on first user interaction.
-    if (!audio.initialized && (input.isKeyDown('Enter') || input.isMouseDown() || input.isPointerLocked())) {
+    if (!audio.initialized && !audioInitStarted && (input.isKeyDown('Enter') || input.isMouseDown() || input.isPointerLocked())) {
         audioInitStarted = true;
         audio.init().catch((error) => console.warn('[FuryFire] Audio initialisation failed:', error));
     }
@@ -1093,9 +1159,13 @@ function gameLoop(timestamp) {
             renderPlaying(dt);
             break;
         case GameState.PAUSED:
-            renderPlaying(dt);
+            if (player) renderPlaying(dt);
             menuSystem.renderPause(bufferCtx);
             updatePaused();
+            break;
+        case GameState.SETTINGS:
+            if (player) renderPlaying(dt);
+            else menuSystem.renderTitle(bufferCtx);
             break;
         case GameState.DEATH:
             updateDeath(dt);
@@ -1108,8 +1178,11 @@ function gameLoop(timestamp) {
             break;
     }
 
+    window.dispatchEvent(new CustomEvent('furyfire:state', { detail: { state: gameState } }));
     // Keep CrazyGames' lifecycle state in sync with actual gameplay, not menus or intermission screens.
-    syncCrazyGamesGameplay(gameState === GameState.PLAYING);
+    if (!(pausedAfterFocusLoss && gameState === GameState.PAUSED)) {
+        syncCrazyGamesGameplay(gameState === GameState.PLAYING);
+    }
 
     // Blit the off-screen buffer onto the display canvas.
     displayCtx.drawImage(buffer, 0, 0);
@@ -1129,10 +1202,13 @@ function updateLoading(dt) {
     bufferCtx.fillStyle = '#000000';
     bufferCtx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    bufferCtx.font = 'bold 12px "Courier New", Courier, monospace';
-    bufferCtx.fillStyle = '#FF6622';
+    bufferCtx.font = 'bold 14px "Courier New", Courier, monospace';
     bufferCtx.textAlign = 'center';
     bufferCtx.textBaseline = 'middle';
+    bufferCtx.lineWidth = 2;
+    bufferCtx.strokeStyle = '#4a1b0b';
+    bufferCtx.strokeText('LOADING...', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+    bufferCtx.fillStyle = '#ff854b';
     bufferCtx.fillText('LOADING...', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 
     // Textures are generated synchronously in the constructor, so we can
@@ -1194,6 +1270,7 @@ function updateLevelIntro(dt) {
 function updatePaused() {
     // Resume on Escape.
     if (wasKeyJustPressed('Escape')) {
+        pausedAfterFocusLoss = false;
         gameState = GameState.PLAYING;
         if (displayCanvas && !input.isPointerLocked()) {
             requestPointerLockSafe();
@@ -1203,6 +1280,7 @@ function updatePaused() {
 
     // Restart on R.
     if (wasKeyJustPressed('KeyR')) {
+        pausedAfterFocusLoss = false;
         restartLevel();
         prevPlayerHealth = player ? player.health : 100;
         gameState = GameState.PLAYING;
@@ -1214,6 +1292,7 @@ function updatePaused() {
 
     // Quit to title on Q.
     if (wasKeyJustPressed('KeyQ')) {
+        pausedAfterFocusLoss = false;
         gameState = GameState.TITLE;
         return;
     }
@@ -1256,15 +1335,16 @@ function updateLevelComplete(dt) {
     // One optional midgame ad at a genuine mission break, after mission 3.
     if (crazyGamesInitialized && currentLevelIndex === 2) {
         adBreakPending = true;
+        let adStarted = false;
         requestCrazyGamesMidgameAd({
-            onStarted: () => audio.mute(),
+            onStarted: () => { adStarted = true; audio.mute(); },
             onFinished: () => {
-                audio.unmute();
+                if (adStarted) audio.unmute();
                 adBreakPending = false;
                 continueAfterLevelComplete();
             },
             onError: () => {
-                audio.unmute();
+                if (adStarted) audio.unmute();
                 adBreakPending = false;
                 continueAfterLevelComplete();
             },

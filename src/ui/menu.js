@@ -11,15 +11,16 @@
 // -----------------------------------------------------------------------------
 
 const FONT_FAMILY = '"Courier New", Courier, monospace';
+const uiText = (value) => typeof window.FuryFireTranslate === 'function' ? window.FuryFireTranslate(value) : value;
 
 /** Blink interval for "PRESS ENTER" prompts (seconds per full cycle). */
 const BLINK_INTERVAL = 1.0;
 
 /** Scanline gap in pixels (every Nth pixel row is darkened). */
-const SCANLINE_GAP = 2;
+const SCANLINE_GAP = 3;
 
 /** Scanline opacity. */
-const SCANLINE_ALPHA = 0.12;
+const SCANLINE_ALPHA = 0.035;
 
 // =============================================================================
 // MenuSystem Class
@@ -39,6 +40,7 @@ export class MenuSystem {
 
         /** @type {number} Elapsed time accumulator for animations. */
         this._elapsed = 0;
+        this._scanlinesEnabled = true;
 
         /** @type {number} Elapsed time accumulator (kept for API compat). */
         this._titleReady = false;
@@ -57,6 +59,8 @@ export class MenuSystem {
     update(dt) {
         this._elapsed += dt;
     }
+
+    setScanlinesEnabled(enabled) { this._scanlinesEnabled = Boolean(enabled); }
 
     /**
      * Render the title screen.
@@ -84,11 +88,11 @@ export class MenuSystem {
         this._drawRetroTitle(ctx, cx, cy - 30);
 
         // -- Subtitle tagline --
-        ctx.font = `bold 8px ${FONT_FAMILY}`;
-        ctx.fillStyle = '#888888';
+        ctx.font = `bold 9px ${FONT_FAMILY}`;
+        ctx.fillStyle = '#b5becb';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('PIXELFORGE STUDIOS PRESENTS', cx, cy - 5);
+        ctx.fillText(uiText('PIXELFORGE STUDIOS PRESENTS'), cx, cy - 5);
 
         // -- Single-player label --
         const modeY = cy + 12;
@@ -97,16 +101,21 @@ export class MenuSystem {
         ctx.textBaseline = 'top';
 
         ctx.fillStyle = '#0789ff';
-        ctx.fillText('> START <', cx, modeY);
+        ctx.fillText(uiText('> START <'), cx, modeY);
 
         // -- Controls list --
         const controlsY = cy + 55;
         ctx.font = `8px ${FONT_FAMILY}`;
-        ctx.fillStyle = '#666666';
+        ctx.fillStyle = '#a0a8b4';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('WASD - MOVE  |  MOUSE - AIM  |  CLICK - FIRE  |  E - INTERACT', cx, controlsY);
-        ctx.fillText('1-7 - WEAPONS  |  M - MAP  |  TAB - OBJECTIVES  |  ESC - PAUSE', cx, controlsY + 12);
+        if (window.FuryFireTouchEnabled) {
+            ctx.fillText(uiText('MOVE - STICK  |  SWIPE - AIM  |  FIRE - SHOOT'), cx, controlsY);
+            ctx.fillText(uiText('USE - DOORS  |  PSTL / SHOT / AUTO - WEAPONS'), cx, controlsY + 12);
+        } else {
+            ctx.fillText('WASD - MOVE  |  MOUSE - AIM  |  CLICK - FIRE  |  E - INTERACT', cx, controlsY);
+            ctx.fillText(uiText('1-7 - WEAPONS  |  M - MAP  |  TAB - OBJECTIVES  |  ESC - SETTINGS'), cx, controlsY + 12);
+        }
 
         // -- Blinking prompt --
         if (this._isBlinkOn()) {
@@ -114,7 +123,7 @@ export class MenuSystem {
             ctx.fillStyle = '#16b7ff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText('CLICK OR PRESS ENTER', cx, controlsY + 30);
+            ctx.fillText(uiText('CLICK OR PRESS ENTER'), cx, controlsY + 30);
         }
 
         // -- Scanlines and CRT effects --
@@ -155,9 +164,9 @@ export class MenuSystem {
         ctx.font = `bold 8px ${FONT_FAMILY}`;
         ctx.fillStyle = '#AAAAAA';
         ctx.textBaseline = 'top';
-        ctx.fillText('ESC - RESUME', cx, cy + 15);
-        ctx.fillText('R - RESTART LEVEL', cx, cy + 30);
-        ctx.fillText('Q - QUIT TO TITLE', cx, cy + 45);
+        ctx.fillText(uiText('ESC - RESUME'), cx, cy + 15);
+        ctx.fillText(uiText('R - RESTART LEVEL'), cx, cy + 30);
+        ctx.fillText(uiText('Q - QUIT TO TITLE'), cx, cy + 45);
 
         // -- Scanlines --
         this._renderScanlines(ctx);
@@ -355,52 +364,38 @@ export class MenuSystem {
      */
     _drawRetroTitle(ctx, cx, cy) {
         const title = 'FURYFIRE';
-
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        ctx.font = `bold 30px ${FONT_FAMILY}`;
 
-        // Outer glow layer.
-        ctx.font = `bold 32px ${FONT_FAMILY}`;
-        ctx.fillStyle = 'rgba(7, 137, 255, 0.18)';
-        ctx.fillText(title, cx, cy);
-
-        // Drop shadow.
-        ctx.fillStyle = '#061a35';
-        ctx.fillText(title, cx + 3, cy + 3);
-
-        // Main text - bright red/orange gradient simulation.
-        ctx.fillStyle = '#0789ff';
-        ctx.fillText(title, cx + 1, cy + 1);
+        // Tight shadow and outline add depth without the hazy multi-pass glow.
+        ctx.fillStyle = '#031326';
+        ctx.fillText(title, cx + 1, cy + 2);
+        ctx.strokeStyle = '#07549a';
+        ctx.lineWidth = 1;
+        ctx.strokeText(title, cx, cy);
         ctx.fillStyle = '#16b7ff';
         ctx.fillText(title, cx, cy);
 
-        // Highlight pass (top edge catch-light effect).
+        // Restrained top-edge highlight preserves the retro treatment while staying readable.
         ctx.save();
         ctx.beginPath();
-        ctx.rect(0, cy - 18, this.screenWidth, 10);
+        ctx.rect(0, cy - 15, this.screenWidth, 9);
         ctx.clip();
-        ctx.fillStyle = '#b9e6ff';
+        ctx.fillStyle = '#d8f5ff';
         ctx.fillText(title, cx, cy);
         ctx.restore();
 
-        // Thin underline accent.
-        const textMetrics = ctx.measureText(title);
-        const textW = textMetrics.width;
+        const textW = ctx.measureText(title).width;
         ctx.strokeStyle = '#0789ff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(cx - textW / 2, cy + 18);
         ctx.lineTo(cx + textW / 2, cy + 18);
         ctx.stroke();
-
-        // Decorative dots at line ends.
         ctx.fillStyle = '#16b7ff';
-        ctx.beginPath();
-        ctx.arc(cx - textW / 2, cy + 18, 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(cx + textW / 2, cy + 18, 3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(Math.floor(cx - textW / 2) - 1, cy + 16, 3, 3);
+        ctx.fillRect(Math.ceil(cx + textW / 2) - 1, cy + 16, 3, 3);
     }
 
     // -------------------------------------------------------------------------
@@ -414,6 +409,7 @@ export class MenuSystem {
      * @private
      */
     _renderScanlines(ctx) {
+        if (!this._scanlinesEnabled) return;
         ctx.fillStyle = `rgba(0, 0, 0, ${SCANLINE_ALPHA})`;
         for (let y = 0; y < this.screenHeight; y += SCANLINE_GAP) {
             ctx.fillRect(0, y, this.screenWidth, 1);
@@ -433,7 +429,7 @@ export class MenuSystem {
 
         const vg = ctx.createRadialGradient(cx, cy, radius * 0.3, cx, cy, radius);
         vg.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        vg.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+        vg.addColorStop(1, 'rgba(0, 0, 0, 0.34)');
 
         ctx.fillStyle = vg;
         ctx.fillRect(0, 0, this.screenWidth, this.screenHeight);

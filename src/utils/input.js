@@ -142,6 +142,35 @@ class InputManager {
     }
 
     /**
+     * Set a virtual key for touch controls. It shares the game's existing input
+     * path, so movement, interactions, and weapon selection behave like keys.
+     */
+    setVirtualKey(code, isDown) {
+        if (!code) return;
+        if (isDown) this._keysDown.add(code);
+        else this._keysDown.delete(code);
+    }
+
+    /** Tap a key long enough for the frame loop to observe an edge press. */
+    tapVirtualKey(code, duration = 100) {
+        this.setVirtualKey(code, true);
+        window.setTimeout(() => this.setVirtualKey(code, false), duration);
+    }
+
+    /** Set the virtual left mouse button used by the weapon system. */
+    setVirtualMouseDown(isDown) {
+        const next = Boolean(isDown);
+        if (next && !this._mouseDown) this._mousePressed = true;
+        this._mouseDown = next;
+    }
+
+    /** Add pointer/touch look movement to the same deltas as mouse look. */
+    addLookDelta(dx, dy = 0) {
+        if (Number.isFinite(dx)) this._mouseDeltaX += dx;
+        if (Number.isFinite(dy)) this._mouseDeltaY += dy;
+    }
+
+    /**
      * Horizontal mouse movement accumulated since last update().
      * Positive = rightward.
      * @returns {number}

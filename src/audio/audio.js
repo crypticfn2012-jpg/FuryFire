@@ -29,16 +29,27 @@ export class AudioManager {
         this._masterGain = null;
 
         /** @type {number} */
-        this._masterVolume = 1.0;
+        const storedVolume = (key, fallback) => {
+            try { const value = localStorage.getItem('furyfire.' + key); return value === null ? fallback : Math.max(0, Math.min(1, Number(value))); }
+            catch (_) { return fallback; }
+        };
+        this._masterVolume = storedVolume('master', 1.0);
+        this._sfxVolume = storedVolume('effects', 1.0);
+        this._musicVolume = storedVolume('music', 0.25);
+        this._sfxGain = null;
 
         /** @type {boolean} */
         this._muted = false;
+        this._platformMuted = false;
 
         /** @type {boolean} */
         this._initialized = false;
 
         /** @type {AudioBufferSourceNode|null} */
         this._musicSource = null;
+
+        /** Replace repeated automatic-fire voices so long samples do not stack. */
+        this._replaceableSources = new Map();
 
         /** @type {GainNode|null} */
         this._musicGain = null;
@@ -72,11 +83,15 @@ export class AudioManager {
         }
 
         this._masterGain = this._ctx.createGain();
-        this._masterGain.gain.value = this._masterVolume;
+        this._masterGain.gain.value = (this._muted || this._platformMuted) ? 0 : this._masterVolume;
         this._masterGain.connect(this._ctx.destination);
+        this._sfxGain = this._ctx.createGain();
+        this._sfxGain.gain.value = this._sfxVolume;
+        this._sfxGain.connect(this._masterGain);
 
         this._generateAllSounds();
         this._initialized = true;
+        await Promise.all([this._loadBundledSounds(), this.loadMusic(new URL('GameMusic.mp3', import.meta.url).href)]);
     }
 
     /**
@@ -97,8 +112,22 @@ export class AudioManager {
         const volume = options.volume !== undefined ? options.volume : 1.0;
         const pan    = options.pan    !== undefined ? options.pan    : 0.0;
 
+        if (name === 'machinegun_fire') {
+            const previous = this._replaceableSources.get(name);
+            if (previous) {
+                try { previous.stop(); } catch (_) { /* already ended */ }
+                this._replaceableSources.delete(name);
+            }
+        }
+
         const source = this._ctx.createBufferSource();
         source.buffer = buffer;
+        if (name === 'machinegun_fire') {
+            this._replaceableSources.set(name, source);
+            source.addEventListener('ended', () => {
+                if (this._replaceableSources.get(name) === source) this._replaceableSources.delete(name);
+            }, { once: true });
+        }
 
         // Per-sound gain
         const gain = this._ctx.createGain();
@@ -110,10 +139,10 @@ export class AudioManager {
             panner.pan.value = pan;
             source.connect(gain);
             gain.connect(panner);
-            panner.connect(this._masterGain);
+            panner.connect(this._sfxGain || this._masterGain);
         } else {
             source.connect(gain);
-            gain.connect(this._masterGain);
+            gain.connect(this._sfxGain || this._masterGain);
         }
 
         source.start(0);
@@ -125,21 +154,50 @@ export class AudioManager {
      */
     setMasterVolume(v) {
         this._masterVolume = Math.max(0, Math.min(1, v));
-        if (this._masterGain) {
-            this._masterGain.gain.value = this._masterVolume;
-        }
+        if (this._masterGain) this._masterGain.gain.value = (this._muted || this._platformMuted) ? 0 : this._masterVolume;
     }
 
-    /** Mute all audio output. */
+    setSfxVolume(v) {
+        this._sfxVolume = Math.max(0, Math.min(1, v));
+        if (this._sfxGain) this._sfxGain.gain.value = this._sfxVolume;
+    }
+
+    setMusicVolume(v) {
+        this._musicVolume = Math.max(0, Math.min(1, v));
+        if (this._musicGain) this._musicGain.gain.value = this._musicVolume;
+    }
+
+    get volumes() { return { master: this._masterVolume, effects: this._sfxVolume, music: this._musicVolume }; }
+
+    /** Mute audio for an in-game break such as an ad. */
     mute() {
         this._muted = true;
         if (this._masterGain) this._masterGain.gain.value = 0;
     }
 
-    /** Unmute audio output, restoring the previous master volume. */
+    /** Unmute after an in-game break, respecting the platform's mute setting. */
     unmute() {
         this._muted = false;
-        if (this._masterGain) this._masterGain.gain.value = this._masterVolume;
+        if (this._masterGain) this._masterGain.gain.value = this._platformMuted ? 0 : this._masterVolume;
+    }
+
+    /** CrazyGames platform mute takes priority over the in-game volume controls. */
+    setPlatformMuted(muted) {
+        this._platformMuted = Boolean(muted);
+        if (this._masterGain) this._masterGain.gain.value = (this._muted || this._platformMuted) ? 0 : this._masterVolume;
+    }
+
+    /**
+     * Resume a suspended/interrupted context after a real user gesture.
+     * Needed by mobile browsers when audio is interrupted by app switching or calls.
+     */
+    async resume() {
+        if (!this._ctx || this._ctx.state === 'running') return;
+        try {
+            await this._ctx.resume();
+        } catch (error) {
+            console.warn('[AudioManager] Could not resume audio context:', error);
+        }
     }
 
     /**
@@ -190,7 +248,7 @@ export class AudioManager {
         source.loop = true;
 
         const gain = this._ctx.createGain();
-        gain.gain.value = 0.25;
+        gain.gain.value = this._musicVolume;
 
         source.connect(gain);
         gain.connect(this._masterGain);
@@ -217,6 +275,31 @@ export class AudioManager {
     // -------------------------------------------------------------------------
     // Internal - Sound Generation
     // -------------------------------------------------------------------------
+
+    /**
+     * Decode authored one-shot effects. Missing files retain their procedural fallback.
+     * @private
+     */
+    async _loadBundledSounds() {
+        const assets = [
+            ['pistol_fire', 'Pistol.mp3'], ['shotgun_fire', 'shotgun.mp3'],
+            ['machinegun_fire', 'MachineGun.mp3'], ['plasma_fire', 'Plasma Rifle.mp3'],
+            ['sniper_fire', 'Sniper Rifle.mp3'], ['explosion', 'Explosion.mp3'],
+            ['enemy_pain', 'EnemyHurtGrunt.mp3'], ['player_hurt', 'HurtGrunt.mp3'],
+            ['weapon_cock', 'GunCock(Universal).mp3'], ['knife_pullout', 'KnifePullout.mp3'],
+            ['weapon_reload', 'GunReload.mp3'],
+        ];
+        await Promise.all(assets.map(async ([name, filename]) => {
+            try {
+                const response = await fetch(new URL(filename, import.meta.url));
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const encoded = await response.arrayBuffer();
+                this._buffers.set(name, await this._ctx.decodeAudioData(encoded));
+            } catch (error) {
+                console.warn('[AudioManager] Using fallback for ' + filename + ':', error);
+            }
+        }));
+    }
 
     /** @private */
     _genFuryFireTheme(sampleRate) {

@@ -7,6 +7,7 @@
     <meta name="description" content="FuryFire is a retro first-person shooter by PixelForge Studios. Fight through five missions, master seven weapons, and take down the Commander.">
     <title>FuryFire | PixelForge Studios</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/mobile-controls.css">
     <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 </head>
 <body>
@@ -24,7 +25,11 @@
         </div>
     </div>
     <canvas id="game-canvas" aria-label="FuryFire first-person shooter"></canvas>
+    <button id="settings-launcher" class="settings-launcher" type="button" aria-label="Open settings">SETTINGS <span>⚙</span></button>
+    <div id="settings-root" aria-hidden="true"></div>
+    <script type="module" src="src/ui/settings.js"></script>
     <script type="module" src="src/branding/boot-screen.js"></script>
+    <script type="module" src="src/platform/mobile-controls.js"></script>
     <script type="module" src="src/main.js"></script>
 </body>
 </html>

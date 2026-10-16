@@ -117,12 +117,14 @@ const level2 = {
     // Player starts in the south elevator arrival area, facing north.
     playerStart: { x: 19.5, y: 36.5, angle: -Math.PI / 2 },
 
-    // 14 enemies: Grunts and Soldiers.
+    // 14 enemies: Grunts and Soldiers. The first encounter is placed well
+    // up the narrow entry corridor, outside the initial sight range so the
+    // player can orient before being engaged.
     enemies: [
-        // Start corridor
-        { type: 'grunt',   x: 19.5, y: 30.5 },
-        // Hub area - soldiers in strategic positions
-        { type: 'soldier', x: 17.5, y: 20.5 },
+        // First contact: approach from the start corridor; the enemy cannot see the player immediately.
+        { type: 'grunt',   x: 19.5, y: 27.5 },
+        // Hub area - one grunt and one soldier introduce the stronger enemy gradually.
+        { type: 'grunt',   x: 17.5, y: 20.5 },
         { type: 'soldier', x: 22.5, y: 20.5 },
         { type: 'grunt',   x: 19.5, y: 15.5 },
         // West wing
@@ -162,7 +164,7 @@ const level2 = {
         { type: 'AMMO_SHELLS',  x: 5.5,  y: 20.5 },
         { type: 'AMMO_SHELLS',  x: 36.5, y: 20.5 },
         // Armor in a strategic location
-        { type: 'ARMOR', x: 19.5, y: 24.5 },
+        { type: 'ARMOR', x: 19.5, y: 33.5 }, // Early defensive pickup before the first proper fight
     ],
 
     // Three collection objectives.

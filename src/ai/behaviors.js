@@ -35,17 +35,18 @@ export const GRUNT_BEHAVIOR = Object.freeze({
 
 /** @type {import('./behaviors').BehaviorConfig} */
 export const SOLDIER_BEHAVIOR = Object.freeze({
-    sightRange:  10,
-    attackRange: 8,
-    fireRate:    1.5,
-    accuracy:    0.5,
+    // A clear step up from grunts, but not an instant-death threat.
+    sightRange:  9,
+    attackRange: 7,
+    fireRate:    1.2,
+    accuracy:    0.42,
     patrolSpeed: 1.2,
-    chaseSpeed:  2.0,
+    chaseSpeed:  1.8,
     painChance:  0.3,
     strafes:     true,      // Moves laterally during ATTACK state.
-    damage:      8,
+    damage:      6,
     spriteId:    101,
-    hp:          50,
+    hp:          45,
 });
 
 // -----------------------------------------------------------------------------
@@ -62,10 +63,10 @@ export const SCOUT_BEHAVIOR = Object.freeze({
     fireRate:    0.8,
     accuracy:    0.4,
     patrolSpeed: 1.5,
-    chaseSpeed:  3.0,
+    chaseSpeed:  2.8,
     painChance:  0.6,
     zigzag:      true,      // Weaves side to side during CHASE.
-    damage:      15,
+    damage:      12,
     spriteId:    102,
     hp:          25,
 });
@@ -81,14 +82,14 @@ export const SCOUT_BEHAVIOR = Object.freeze({
 export const BRUTE_BEHAVIOR = Object.freeze({
     sightRange:  8,
     attackRange: 7,
-    fireRate:    5.0,
-    accuracy:    0.2,
+    fireRate:    3.0,       // Sustained pressure without unavoidable damage spikes.
+    accuracy:    0.18,
     patrolSpeed: 0.5,
     chaseSpeed:  0.7,
     painChance:  0.1,       // Nearly impossible to stagger.
     damage:      3,
     spriteId:    103,
-    hp:          150,
+    hp:          135,
     scale:       1.5,       // Rendered 50% larger than standard enemies.
 });
 
