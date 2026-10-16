@@ -83,7 +83,7 @@ export class AudioManager {
         }
 
         this._masterGain = this._ctx.createGain();
-        this._masterGain.gain.value = this._masterVolume;
+        this._masterGain.gain.value = (this._muted || this._platformMuted) ? 0 : this._masterVolume;
         this._masterGain.connect(this._ctx.destination);
         this._sfxGain = this._ctx.createGain();
         this._sfxGain.gain.value = this._sfxVolume;
