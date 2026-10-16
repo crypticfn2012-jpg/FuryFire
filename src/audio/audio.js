@@ -29,7 +29,14 @@ export class AudioManager {
         this._masterGain = null;
 
         /** @type {number} */
-        this._masterVolume = 1.0;
+        const storedVolume = (key, fallback) => {
+            try { const value = localStorage.getItem('furyfire.' + key); return value === null ? fallback : Math.max(0, Math.min(1, Number(value))); }
+            catch (_) { return fallback; }
+        };
+        this._masterVolume = storedVolume('master', 1.0);
+        this._sfxVolume = storedVolume('effects', 1.0);
+        this._musicVolume = storedVolume('music', 0.25);
+        this._sfxGain = null;
 
         /** @type {boolean} */
         this._muted = false;
@@ -77,11 +84,13 @@ export class AudioManager {
         this._masterGain = this._ctx.createGain();
         this._masterGain.gain.value = this._masterVolume;
         this._masterGain.connect(this._ctx.destination);
+        this._sfxGain = this._ctx.createGain();
+        this._sfxGain.gain.value = this._sfxVolume;
+        this._sfxGain.connect(this._masterGain);
 
         this._generateAllSounds();
-        // Keep generated fallbacks ready, then replace matching effects with the authored MP3 assets.
         this._initialized = true;
-        await this._loadBundledSounds();
+        await Promise.all([this._loadBundledSounds(), this.loadMusic(new URL('GameMusic.mp3', import.meta.url).href)]);
     }
 
     /**
@@ -129,10 +138,10 @@ export class AudioManager {
             panner.pan.value = pan;
             source.connect(gain);
             gain.connect(panner);
-            panner.connect(this._masterGain);
+            panner.connect(this._sfxGain || this._masterGain);
         } else {
             source.connect(gain);
-            gain.connect(this._masterGain);
+            gain.connect(this._sfxGain || this._masterGain);
         }
 
         source.start(0);
@@ -144,10 +153,20 @@ export class AudioManager {
      */
     setMasterVolume(v) {
         this._masterVolume = Math.max(0, Math.min(1, v));
-        if (this._masterGain) {
-            this._masterGain.gain.value = this._masterVolume;
-        }
+        if (this._masterGain) this._masterGain.gain.value = this._muted ? 0 : this._masterVolume;
     }
+
+    setSfxVolume(v) {
+        this._sfxVolume = Math.max(0, Math.min(1, v));
+        if (this._sfxGain) this._sfxGain.gain.value = this._sfxVolume;
+    }
+
+    setMusicVolume(v) {
+        this._musicVolume = Math.max(0, Math.min(1, v));
+        if (this._musicGain) this._musicGain.gain.value = this._musicVolume;
+    }
+
+    get volumes() { return { master: this._masterVolume, effects: this._sfxVolume, music: this._musicVolume }; }
 
     /** Mute all audio output. */
     mute() {
@@ -209,7 +228,7 @@ export class AudioManager {
         source.loop = true;
 
         const gain = this._ctx.createGain();
-        gain.gain.value = 0.25;
+        gain.gain.value = this._musicVolume;
 
         source.connect(gain);
         gain.connect(this._masterGain);
@@ -248,6 +267,7 @@ export class AudioManager {
             ['sniper_fire', 'Sniper Rifle.mp3'], ['explosion', 'Explosion.mp3'],
             ['enemy_pain', 'EnemyHurtGrunt.mp3'], ['player_hurt', 'HurtGrunt.mp3'],
             ['weapon_cock', 'GunCock(Universal).mp3'], ['knife_pullout', 'KnifePullout.mp3'],
+            ['weapon_reload', 'GunReload.mp3'],
         ];
         await Promise.all(assets.map(async ([name, filename]) => {
             try {
